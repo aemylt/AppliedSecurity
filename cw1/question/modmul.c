@@ -11,22 +11,24 @@ Perform stage 1:
 void stage1() {
 
   mpz_t N, e, m, c;
-  int i;
 
   mpz_init(N);
   mpz_init(e);
   mpz_init(m);
   mpz_init(c);
 
-  for (i = 0; i < 10; i++) {
+  int cont = gmp_scanf("%ZX", N);
 
-    gmp_scanf("%ZX", N);
+  while(cont != -1) {
+
     gmp_scanf("%ZX", e);
     gmp_scanf("%ZX", m);
 
     mpz_powm(c, m, e, N);
 
     gmp_printf("%ZX\n", c);
+
+    cont = gmp_scanf("%ZX", N);
 
   }
 
@@ -43,7 +45,6 @@ Perform stage 2:
 void stage2() {
 
   mpz_t N, d, p, q, d_p, d_q, i_p, i_q, c, m_p, m_q, m;
-  int i;
 
   mpz_init(N);
   mpz_init(d);
@@ -58,9 +59,10 @@ void stage2() {
   mpz_init(m_q);
   mpz_init(m);
 
-  for (i = 0; i < 10; ++i) {
+  int cont = gmp_scanf("%ZX", N);
 
-    gmp_scanf("%ZX", N);
+  while (cont != -1) {
+
     gmp_scanf("%ZX", d);
     gmp_scanf("%ZX", p);
     gmp_scanf("%ZX", q);
@@ -72,14 +74,16 @@ void stage2() {
 
     mpz_powm(m_p, c, d_p, p);
     mpz_powm(m_q, c, d_q, q);
-		mpz_mul(m_p, m_p, q);
-		mpz_mul(m_p, m_p, i_q);
-		mpz_mul(m_q, m_q, p);
-		mpz_mul(m_q, m_q, i_p);
-		mpz_add(m, m_p, m_q);
-		mpz_mod(m, m, N);
+    mpz_mul(m_p, m_p, q);
+    mpz_mul(m_p, m_p, i_q);
+    mpz_mul(m_q, m_q, p);
+    mpz_mul(m_q, m_q, i_p);
+    mpz_add(m, m_p, m_q);
+    mpz_mod(m, m, N);
 
     gmp_printf("%ZX\n", m);
+
+    cont = gmp_scanf("%ZX", N);
 
   }
 
@@ -97,7 +101,6 @@ void stage3() {
 
   mpz_t p, q, g, h, m, c1, c2, w;
   gmp_randstate_t state;
-  int i;
 
   mpz_init(p);
   mpz_init(q);
@@ -108,25 +111,29 @@ void stage3() {
   mpz_init(c2);
   mpz_init(w);
 
-	gmp_randinit_mt(state);
+  gmp_randinit_mt(state);
+  //mpz_set_ui(w, 1);
 
-  for (i = 0; i < 10; ++i) {
+  int cont = gmp_scanf("%ZX", p);
 
-    gmp_scanf("%ZX", p);
+  while (cont != -1) {
+
     gmp_scanf("%ZX", q);
     gmp_scanf("%ZX", g);
     gmp_scanf("%ZX", h);
     gmp_scanf("%ZX", m);
 
-		mpz_urandomm(w, state, q);
+    mpz_urandomm(w, state, q);
 
     mpz_powm(c1, g, w, p);
     mpz_powm(c2, h, w, p);
-		mpz_mul(c2, m, c2);
-		mpz_mod(c2, c2, p);
+    mpz_mul(c2, m, c2);
+    mpz_mod(c2, c2, p);
 
     gmp_printf("%ZX\n", c1);
     gmp_printf("%ZX\n", c2);
+
+    cont = gmp_scanf("%ZX", p);
 
   }
 
@@ -143,20 +150,20 @@ Perform stage 4:
 void stage4() {
 
   mpz_t p, q, g, x, c_1, c_2, m, tmp;
-	int i;
 
-	mpz_init(p);
-	mpz_init(q);
-	mpz_init(g);
-	mpz_init(x);
-	mpz_init(c_1);
-	mpz_init(c_2);
-	mpz_init(m);
-	mpz_init(tmp);
+  mpz_init(p);
+  mpz_init(q);
+  mpz_init(g);
+  mpz_init(x);
+  mpz_init(c_1);
+  mpz_init(c_2);
+  mpz_init(m);
+  mpz_init(tmp);
 
-  for (i = 0; i < 10; ++i) {
+  int cont = gmp_scanf("%ZX", p);
 
-    gmp_scanf("%ZX", p);
+  while (cont != -1) {
+
     gmp_scanf("%ZX", q);
     gmp_scanf("%ZX", g);
     gmp_scanf("%ZX", x);
@@ -164,11 +171,13 @@ void stage4() {
     gmp_scanf("%ZX", c_2);
 
     mpz_sub(tmp, q, x);
-		mpz_powm(c_1, c_1, tmp, p);
-		mpz_mul(m, c_1, c_2);
-		mpz_mod(m, m, p);
+    mpz_powm(c_1, c_1, tmp, p);
+    mpz_mul(m, c_1, c_2);
+    mpz_mod(m, m, p);
 
     gmp_printf("%ZX\n", m);
+
+    cont = gmp_scanf("%ZX", p);
 
   }
 

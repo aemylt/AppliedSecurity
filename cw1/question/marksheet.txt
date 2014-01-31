@@ -50,7 +50,7 @@ the style or efficiency of a solution.
 [X] Stage 4 : implemented ElGamal decryption                         ( 10%)
 
     Extra   : implemented (and integrated) major optimisations
-[?]           - Chinese Remainder Theorem (CRT)                      ( 10%)
+[X]           - Chinese Remainder Theorem (CRT)                      ( 10%)
 [?]           - Non-binary (i.e., "windowed") exponentiation         ( 20%)
 [?]           - Montgomery multiplication                            ( 30%)
 

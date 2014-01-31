@@ -103,7 +103,7 @@ Perform stage 3:
 
 void stage3() {
 
-  mpz_t p, q, g, h, m, c1, c2, w;
+  mpz_t p, q, g, h, m, c_1, c_2, w;
   gmp_randstate_t state;
 
   // Initialise integers
@@ -112,8 +112,8 @@ void stage3() {
   mpz_init(g);
   mpz_init(h);
   mpz_init(m);
-  mpz_init(c1);
-  mpz_init(c2);
+  mpz_init(c_1);
+  mpz_init(c_2);
   mpz_init(w);
 
   // Initialise random state with a Mersenne Twister algorithm
@@ -134,14 +134,14 @@ void stage3() {
 
     // c_1 = g^w (mod p)
     // c_2 = m * h^w (mod p)
-    mpz_powm(c1, g, w, p);
-    mpz_powm(c2, h, w, p);
-    mpz_mul(c2, m, c2);
-    mpz_mod(c2, c2, p);
+    mpz_powm(c_1, g, w, p);
+    mpz_powm(c_2, h, w, p);
+    mpz_mul(c_2, m, c_2);
+    mpz_mod(c_2, c_2, p);
 
     // Print to stdout
-    gmp_printf("%ZX\n", c1);
-    gmp_printf("%ZX\n", c2);
+    gmp_printf("%ZX\n", c_1);
+    gmp_printf("%ZX\n", c_2);
 
   }
 

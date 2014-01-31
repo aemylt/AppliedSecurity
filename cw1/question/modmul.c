@@ -12,18 +12,22 @@ void stage1() {
 
   mpz_t N, e, m, c;
 
+  // Initialise integers
   mpz_init(N);
   mpz_init(e);
   mpz_init(m);
   mpz_init(c);
 
+  // Repeat until we reach end of stream
   while(gmp_scanf("%ZX", N) > 0) {
 
     gmp_scanf("%ZX", e);
     gmp_scanf("%ZX", m);
 
+    // c = m^e (mod N)
     mpz_powm(c, m, e, N);
 
+    // Print to stdout
     gmp_printf("%ZX\n", c);
 
   }
@@ -42,6 +46,7 @@ void stage2() {
 
   mpz_t N, d, p, q, d_p, d_q, i_p, i_q, c, m_p, m_q, m;
 
+  // Initialise integers
   mpz_init(N);
   mpz_init(d);
   mpz_init(p);
@@ -55,6 +60,7 @@ void stage2() {
   mpz_init(m_q);
   mpz_init(m);
 
+  // Repeat until we reach end of stream
   while (gmp_scanf("%ZX", N) > 0) {
 
     gmp_scanf("%ZX", d);
@@ -66,8 +72,13 @@ void stage2() {
     gmp_scanf("%ZX", i_q);
     gmp_scanf("%ZX", c);
 
+    // m_p = c^d (mod p)
     mpz_powm(m_p, c, d_p, p);
+    // m_q = c^d (mod q)
     mpz_powm(m_q, c, d_q, q);
+
+    // Compute chinese remainder theorem:
+    // m = (m_p * q * q^-1 (mod p)) + (m_q * p * p^-1 (mod q)) (mod N)
     mpz_mul(m_p, m_p, q);
     mpz_mul(m_p, m_p, i_q);
     mpz_mul(m_q, m_q, p);
@@ -75,6 +86,7 @@ void stage2() {
     mpz_add(m, m_p, m_q);
     mpz_mod(m, m, N);
 
+    // Print to stdout
     gmp_printf("%ZX\n", m);
 
   }
@@ -94,6 +106,7 @@ void stage3() {
   mpz_t p, q, g, h, m, c1, c2, w;
   gmp_randstate_t state;
 
+  // Initialise integers
   mpz_init(p);
   mpz_init(q);
   mpz_init(g);
@@ -103,9 +116,12 @@ void stage3() {
   mpz_init(c2);
   mpz_init(w);
 
+  // Initialise random state with a Mersenne Twister algorithm
+  // Uncomment to use a fixed key
   gmp_randinit_mt(state);
   //mpz_set_ui(w, 1);
 
+  // Repeat until we reach end of stream
   while (gmp_scanf("%ZX", p) > 0) {
 
     gmp_scanf("%ZX", q);
@@ -113,13 +129,17 @@ void stage3() {
     gmp_scanf("%ZX", h);
     gmp_scanf("%ZX", m);
 
+    // Get random value for w
     mpz_urandomm(w, state, q);
 
+    // c_1 = g^w (mod p)
+    // c_2 = m * h^w (mod p)
     mpz_powm(c1, g, w, p);
     mpz_powm(c2, h, w, p);
     mpz_mul(c2, m, c2);
     mpz_mod(c2, c2, p);
 
+    // Print to stdout
     gmp_printf("%ZX\n", c1);
     gmp_printf("%ZX\n", c2);
 
@@ -139,6 +159,7 @@ void stage4() {
 
   mpz_t p, q, g, x, c_1, c_2, m, tmp;
 
+  // Initialise integers
   mpz_init(p);
   mpz_init(q);
   mpz_init(g);
@@ -148,6 +169,7 @@ void stage4() {
   mpz_init(m);
   mpz_init(tmp);
 
+  // Repeat until we reach end of stream
   while (gmp_scanf("%ZX", p) > 0) {
 
     gmp_scanf("%ZX", q);
@@ -156,11 +178,13 @@ void stage4() {
     gmp_scanf("%ZX", c_1);
     gmp_scanf("%ZX", c_2);
 
+    // m = c_1^(q-x) * c_2 (mod p)
     mpz_sub(tmp, q, x);
     mpz_powm(c_1, c_1, tmp, p);
     mpz_mul(m, c_1, c_2);
     mpz_mod(m, m, p);
 
+    // Print to stdout
     gmp_printf("%ZX\n", m);
 
   }

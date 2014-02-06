@@ -1,5 +1,22 @@
 #include "modmul.h"
 
+void exp_mod(mpz_t r, mpz_t x, mpz_t y, mpz_t N) {
+  mpz_t tmp;
+  mpz_init(tmp);
+  mpz_set_ui(tmp, 1);
+  int i;
+
+  for (i = 1023; i >= 0; i--) {
+    mpz_mul(tmp, tmp, tmp);
+    mpz_mod(tmp, tmp, N);
+    if (mpz_tstbit(y, i)) {
+      mpz_mul(tmp, tmp, x);
+      mpz_mod(tmp, tmp, N);
+    }
+  }
+  mpz_set(r, tmp);
+}
+
 /*
 Perform stage 1:
 
@@ -25,7 +42,7 @@ void stage1() {
     gmp_scanf("%ZX", m);
 
     // c = m^e (mod N)
-    mpz_powm(c, m, e, N);
+    exp_mod(c, m, e, N);
 
     // Print to stdout
     gmp_printf("%ZX\n", c);
@@ -73,9 +90,9 @@ void stage2() {
     gmp_scanf("%ZX", c);
 
     // m_p = c^d (mod p)
-    mpz_powm(m_p, c, d_p, p);
+    exp_mod(m_p, c, d_p, p);
     // m_q = c^d (mod q)
-    mpz_powm(m_q, c, d_q, q);
+    exp_mod(m_q, c, d_q, q);
 
     // Compute chinese remainder theorem:
     // m = (m_p * q * q^-1 (mod p)) + (m_q * p * p^-1 (mod q)) (mod N)
@@ -104,7 +121,9 @@ Perform stage 3:
 void stage3() {
 
   mpz_t p, q, g, h, m, c_1, c_2, w;
+#ifndef DEBUG
   gmp_randstate_t state;
+#endif
 
   // Initialise integers
   mpz_init(p);
@@ -116,10 +135,13 @@ void stage3() {
   mpz_init(c_2);
   mpz_init(w);
 
+#ifndef DEBUG
   // Initialise random state with a Mersenne Twister algorithm
-  // Uncomment to use a fixed key
   gmp_randinit_mt(state);
-  //mpz_set_ui(w, 1);
+#else
+  // Set random key w to 1
+  mpz_set_ui(w, 1);
+#endif
 
   // Repeat until we reach end of stream
   while (gmp_scanf("%ZX", p) > 0) {
@@ -129,13 +151,15 @@ void stage3() {
     gmp_scanf("%ZX", h);
     gmp_scanf("%ZX", m);
 
+#ifndef DEBUG
     // Get random value for w
     mpz_urandomm(w, state, q);
+#endif
 
     // c_1 = g^w (mod p)
     // c_2 = m * h^w (mod p)
-    mpz_powm(c_1, g, w, p);
-    mpz_powm(c_2, h, w, p);
+    exp_mod(c_1, g, w, p);
+    exp_mod(c_2, h, w, p);
     mpz_mul(c_2, m, c_2);
     mpz_mod(c_2, c_2, p);
 
@@ -180,7 +204,7 @@ void stage4() {
 
     // m = c_1^(q-x) * c_2 (mod p)
     mpz_sub(tmp, q, x);
-    mpz_powm(c_1, c_1, tmp, p);
+    exp_mod(c_1, c_1, tmp, p);
     mpz_mul(m, c_1, c_2);
     mpz_mod(m, m, p);
 

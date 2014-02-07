@@ -51,7 +51,7 @@ the style or efficiency of a solution.
 
     Extra   : implemented (and integrated) major optimisations
 [X]           - Chinese Remainder Theorem (CRT)                      ( 10%)
-[?]           - Non-binary (i.e., "windowed") exponentiation         ( 20%)
+[X]           - Non-binary (i.e., "windowed") exponentiation         ( 20%)
 [?]           - Montgomery multiplication                            ( 30%)
 
 

@@ -4,21 +4,19 @@ void exp_mod(mpz_t r, mpz_t x, mpz_t y, mpz_t N) {
   mpz_t tmp, mp_u, and_op;
   int i, j, l;
   unsigned int u;
-  int m = 1 << K_BITS;
   mpz_t *T;
 
-  T = malloc(sizeof(mpz_t) * m);
-  for (i = 0; i < m / 2; i++) {
+  T = malloc(sizeof(mpz_t) << (K_BITS - 1));
+  for (i = 0; i < 1 << (K_BITS - 1); i++) {
     mpz_init(T[i]);
-    mpz_powm_ui(T[i], x, i * 2 + 1, N);
+    mpz_powm_ui(T[i], x, (i << 1) + 1, N);
   }
 
   mpz_init(tmp);
   mpz_init(mp_u);
   mpz_init(and_op);
-  mpz_set_ui(and_op, m - 1);
   mpz_set_ui(tmp, 1);
-  i = y->_mp_size * 64 - 1;
+  i = (y->_mp_size << 6) - 1;
 
   while (i >= 0) {
     if (mpz_tstbit(y, i)) {
@@ -38,7 +36,7 @@ void exp_mod(mpz_t r, mpz_t x, mpz_t y, mpz_t N) {
       mpz_mod(tmp, tmp, N);
     }
     if (u != 0) {
-      mpz_mul(tmp, tmp, T[(u - 1)/2]);
+      mpz_mul(tmp, tmp, T[(u - 1) >> 1]);
       mpz_mod(tmp, tmp, N);
     }
     i = l - 1;

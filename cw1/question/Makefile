@@ -17,5 +17,8 @@ all    : modmul
 modmul : $(wildcard *.[ch])
 	@${CC} ${CC_PATHS} ${CC_FLAGS} -o ${@} $(filter %.c, ${^}) ${CC_LIBS}
 
+debug  : $(wildcard *.[ch])
+	@${CC} ${CC_PATHS} ${CC_FLAGS} -D DEBUG -o ${@} $(filter %.c, ${^}) ${CC_LIBS}
+
 clean  : 
-	@rm -f core modmul
+	@rm -f core modmul debug

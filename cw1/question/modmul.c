@@ -1,11 +1,13 @@
 #include "modmul.h"
 
+// Compute r = x^y (mod N) via sliding window.
 void exp_mod(mpz_t r, mpz_t x, mpz_t y, mpz_t N) {
   mpz_t tmp, mp_u, and_op;
   int i, j, l;
   unsigned int u;
   mpz_t *T;
 
+  // Preprocess results for y = 1,3,5..2^k - 1
   T = malloc(sizeof(mpz_t) << (K_BITS - 1));
   for (i = 0; i < 1 << (K_BITS - 1); i++) {
     mpz_init(T[i]);
@@ -16,13 +18,16 @@ void exp_mod(mpz_t r, mpz_t x, mpz_t y, mpz_t N) {
   mpz_init(mp_u);
   mpz_init(and_op);
   mpz_set_ui(tmp, 1);
+  // Set i to the size of y for 64-bit processors.
   i = (y->_mp_size << 6) - 1;
 
   while (i >= 0) {
+    // If y_i = 1 then find l and u, otherwise set l = i and u = 0.
     if (mpz_tstbit(y, i)) {
       l = i - K_BITS + 1;
       if (l < 0) l = 0;
       while (!mpz_tstbit(y, l)) l++;
+      // Calculate u by shifting right l bits and performing a bitwise AND with 2^(i - l + 1) - 1.
       mpz_fdiv_q_2exp(mp_u, y, l);
       mpz_set_ui(and_op, (1 << (i - l + 1)) - 1);
       mpz_and(mp_u, mp_u, and_op);
@@ -31,11 +36,13 @@ void exp_mod(mpz_t r, mpz_t x, mpz_t y, mpz_t N) {
       l = i;
       u = 0;
     }
+    // t = t^(2^(i - l + 1))
     for (j = 0; j < i - l + 1; j++) {
       mpz_mul(tmp, tmp, tmp);
       mpz_mod(tmp, tmp, N);
     }
     if (u != 0) {
+      // Multiply by x^((u - 1)/2) (mod N)
       mpz_mul(tmp, tmp, T[(u - 1) >> 1]);
       mpz_mod(tmp, tmp, N);
     }

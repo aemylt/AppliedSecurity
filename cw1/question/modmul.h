@@ -9,4 +9,6 @@
 
 #include    <gmp.h>
 
+#define K_BITS 4
+
 #endif

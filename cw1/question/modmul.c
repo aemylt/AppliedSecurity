@@ -1,18 +1,47 @@
 #include "modmul.h"
 
 void exp_mod(mpz_t r, mpz_t x, mpz_t y, mpz_t N) {
-  mpz_t tmp;
-  mpz_init(tmp);
-  mpz_set_ui(tmp, 1);
-  int i;
+  mpz_t tmp, mp_u, and_op;
+  int i, j, l;
+  unsigned int u;
+  int m = 1 << K_BITS;
+  mpz_t *T;
 
-  for (i = 1023; i >= 0; i--) {
-    mpz_mul(tmp, tmp, tmp);
-    mpz_mod(tmp, tmp, N);
+  T = malloc(sizeof(mpz_t) * m);
+  for (i = 0; i < m / 2; i++) {
+    mpz_init(T[i]);
+    mpz_powm_ui(T[i], x, i * 2 + 1, N);
+  }
+
+  mpz_init(tmp);
+  mpz_init(mp_u);
+  mpz_init(and_op);
+  mpz_set_ui(and_op, m - 1);
+  mpz_set_ui(tmp, 1);
+  i = y->_mp_size * 64 - 1;
+
+  while (i >= 0) {
     if (mpz_tstbit(y, i)) {
-      mpz_mul(tmp, tmp, x);
+      l = i - K_BITS + 1;
+      if (l < 0) l = 0;
+      while (!mpz_tstbit(y, l)) l++;
+      mpz_fdiv_q_2exp(mp_u, y, l);
+      mpz_set_ui(and_op, (1 << (i - l + 1)) - 1);
+      mpz_and(mp_u, mp_u, and_op);
+      u = mpz_get_ui(mp_u);
+    } else {
+      l = i;
+      u = 0;
+    }
+    for (j = 0; j < i - l + 1; j++) {
+      mpz_mul(tmp, tmp, tmp);
       mpz_mod(tmp, tmp, N);
     }
+    if (u != 0) {
+      mpz_mul(tmp, tmp, T[(u - 1)/2]);
+      mpz_mod(tmp, tmp, N);
+    }
+    i = l - 1;
   }
   mpz_set(r, tmp);
 }

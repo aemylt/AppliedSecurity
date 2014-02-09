@@ -1,17 +1,27 @@
 #include "modmul.h"
 
+// Compute r = x * y (mod N)
+void mul_mod(mpz_t r, mpz_t x, mpz_t y, mpz_t N) {
+      mpz_mul(r, x, y);
+      mpz_mod(r, r, N);
+}
+
 // Compute r = x^y (mod N) via sliding window.
 void exp_mod(mpz_t r, mpz_t x, mpz_t y, mpz_t N) {
-  mpz_t tmp, mp_u, and_op;
+  mpz_t tmp, x_sq, mp_u, and_op;
   int i, j, l;
   unsigned int u;
   mpz_t *T;
 
   // Preprocess results for y = 1,3,5..2^k - 1
   T = malloc(sizeof(mpz_t) << (K_BITS - 1));
-  for (i = 0; i < 1 << (K_BITS - 1); i++) {
+  mpz_init(T[0]);
+  mpz_set(T[0], x);
+  mpz_init(x_sq);
+  mul_mod(x_sq, x, x, N);
+  for (i = 1; i < 1 << (K_BITS - 1); i++) {
     mpz_init(T[i]);
-    mpz_powm_ui(T[i], x, (i << 1) + 1, N);
+    mul_mod(T[i], T[i - 1], x_sq, N);
   }
 
   mpz_init(tmp);
@@ -38,13 +48,11 @@ void exp_mod(mpz_t r, mpz_t x, mpz_t y, mpz_t N) {
     }
     // t = t^(2^(i - l + 1))
     for (j = 0; j < i - l + 1; j++) {
-      mpz_mul(tmp, tmp, tmp);
-      mpz_mod(tmp, tmp, N);
+      mul_mod(tmp, tmp, tmp, N);
     }
     if (u != 0) {
       // Multiply by x^((u - 1)/2) (mod N)
-      mpz_mul(tmp, tmp, T[(u - 1) >> 1]);
-      mpz_mod(tmp, tmp, N);
+      mul_mod(tmp, tmp, T[(u - 1) >> 1], N);
     }
     i = l - 1;
   }
@@ -194,8 +202,7 @@ void stage3() {
     // c_2 = m * h^w (mod p)
     exp_mod(c_1, g, w, p);
     exp_mod(c_2, h, w, p);
-    mpz_mul(c_2, m, c_2);
-    mpz_mod(c_2, c_2, p);
+    mul_mod(c_2, m, c_2, p);
 
     // Print to stdout
     gmp_printf("%ZX\n", c_1);
@@ -239,8 +246,7 @@ void stage4() {
     // m = c_1^(q-x) * c_2 (mod p)
     mpz_sub(tmp, q, x);
     exp_mod(c_1, c_1, tmp, p);
-    mpz_mul(m, c_1, c_2);
-    mpz_mod(m, m, p);
+    mul_mod(m, c_1, c_2, p);
 
     // Print to stdout
     gmp_printf("%ZX\n", m);

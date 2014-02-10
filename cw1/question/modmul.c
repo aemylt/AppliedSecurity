@@ -8,23 +8,21 @@ void mul_mod(mpz_t r, mpz_t x, mpz_t y, mpz_t N) {
 
 // Compute r = x^y (mod N) via sliding window.
 void exp_mod(mpz_t r, mpz_t x, mpz_t y, mpz_t N) {
-  mpz_t tmp, x_sq, mp_u, and_op;
-  int i, j, l;
-  unsigned int u;
+  mpz_t tmp, mp_u, and_op;
+  int64_t i, j, l;
+  uint64_t u;
   mpz_t *T;
 
   // Preprocess results for y = 1,3,5..2^k - 1
   T = malloc(sizeof(mpz_t) << (K_BITS - 1));
-  mpz_init(T[0]);
-  mpz_set(T[0], x);
-  mpz_init(x_sq);
-  mul_mod(x_sq, x, x, N);
+  mpz_init_set(T[0], x);
+  mpz_init(tmp);
+  mul_mod(tmp, x, x, N);
   for (i = 1; i < 1 << (K_BITS - 1); i++) {
     mpz_init(T[i]);
-    mul_mod(T[i], T[i - 1], x_sq, N);
+    mul_mod(T[i], T[i - 1], tmp, N);
   }
 
-  mpz_init(tmp);
   mpz_init(mp_u);
   mpz_init(and_op);
   mpz_set_ui(tmp, 1);
@@ -175,14 +173,14 @@ void stage3() {
   mpz_init(m);
   mpz_init(c_1);
   mpz_init(c_2);
-  mpz_init(w);
 
 #ifndef DEBUG
+  mpz_init(w);
   // Initialise random state with a Mersenne Twister algorithm
   gmp_randinit_mt(state);
 #else
   // Set random key w to 1
-  mpz_set_ui(w, 1);
+  mpz_init_set_ui(w, 1);
 #endif
 
   // Repeat until we reach end of stream

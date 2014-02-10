@@ -29,7 +29,7 @@ void exp_mod(mpz_t r, mpz_t x, mpz_t y, mpz_t N) {
   mpz_init(and_op);
   mpz_set_ui(tmp, 1);
   // Set i to the size of y for 64-bit processors.
-  i = (y->_mp_size << 6) - 1;
+  i = mpz_sizeinbase(y, 2);
 
   while (i >= 0) {
     // If y_i = 1 then find l and u, otherwise set l = i and u = 0.

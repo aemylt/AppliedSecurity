@@ -2,8 +2,14 @@
 
 // Compute r = x * y (mod N)
 void mul_mod(mpz_t r, mpz_t x, mpz_t y, mpz_t N) {
-      mpz_mul(r, x, y);
-      mpz_mod(r, r, N);
+  mpz_mul(r, x, y);
+  mpz_mod(r, r, N);
+}
+
+// Inline function to test if the i-th bit of y is 1 or 0.
+// Does this by finding the (i / 64)-th limb of y and selecting the (i mod 64)-th bit from there.
+inline int test_bit(mpz_t y, int64_t i) {
+  return (y->_mp_d[i >> 6] >> (i & 63)) & 1;
 }
 
 // Compute r = x^y (mod N) via sliding window.
@@ -27,14 +33,14 @@ void exp_mod(mpz_t r, mpz_t x, mpz_t y, mpz_t N) {
   mpz_init(and_op);
   mpz_set_ui(tmp, 1);
   // Set i to the size of y for 64-bit processors.
-  i = mpz_sizeinbase(y, 2);
+  i = y->_mp_size << 6;
 
   while (i >= 0) {
     // If y_i = 1 then find l and u, otherwise set l = i and u = 0.
-    if (mpz_tstbit(y, i)) {
+    if (test_bit(y, i)) {
       l = i - K_BITS + 1;
       if (l < 0) l = 0;
-      while (!mpz_tstbit(y, l)) l++;
+      while (!test_bit(y, l)) l++;
       // Calculate u by shifting right l bits and performing a bitwise AND with 2^(i - l + 1) - 1.
       mpz_fdiv_q_2exp(mp_u, y, l);
       mpz_set_ui(and_op, (1 << (i - l + 1)) - 1);

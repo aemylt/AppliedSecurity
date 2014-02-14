@@ -12,26 +12,78 @@ inline int test_bit(mpz_t y, int64_t i) {
   return (y->_mp_d[i >> 6] >> (i & 63)) & 1;
 }
 
+void mont_init(mpz_t rho2, mpz_t omega, mpz_t N) {
+  uint64_t i;
+  mpz_t sub_op;
+  mpz_init_set_ui(sub_op, 1);
+  mpz_mul_2exp(sub_op, sub_op, 64);
+  mpz_set_ui(omega, 1);
+  for (i = 1; i < 64; i++) {
+    mpz_mul(omega, omega, omega);
+    mpz_mul(omega, omega, N);
+    mpz_set_ui(omega, omega->_mp_d[0]);
+  }
+  mpz_sub(omega, sub_op, omega);
+  mpz_set_ui(rho2, 1);
+  for (i = 1; i <= N->_mp_size << 7; i++) {
+    mpz_add(rho2, rho2, rho2);
+    if (mpz_cmp(rho2, N) > -1) mpz_sub(rho2, rho2, N);
+  }
+}
+
+void mont_mul(mpz_t r, mpz_t x, mpz_t y, mpz_t N, mpz_t omega) {
+  mpz_t tmp, yi_x, u;
+  uint64_t i;
+  mpz_init_set_ui(tmp, 0);
+  mpz_init(u);
+  mpz_init(yi_x);
+  for (i = 0; i < N->_mp_size; i++) {
+    mpz_set_ui(u, x->_mp_d[0]);
+    mpz_mul_ui(u, u, (y->_mp_size > i) ? y->_mp_d[i] : 0);
+    mpz_add_ui(u, u, tmp->_mp_d[0]);
+    mpz_mul(u, u, omega);
+    mpz_set_ui(u, u->_mp_d[0]);
+    mpz_mul(u, u, N);
+    mpz_mul_ui(yi_x, x, (y->_mp_size > i) ? y->_mp_d[i] : 0);
+    mpz_add(tmp, tmp, yi_x);
+    mpz_add(tmp, tmp, u);
+    mpz_fdiv_q_2exp(tmp, tmp, 64);
+  }
+  if (mpz_cmp(tmp, N) > -1) mpz_sub(tmp, tmp, N);
+  mpz_set(r, tmp);
+}
+
 // Compute r = x^y (mod N) via sliding window.
 void exp_mod(mpz_t r, mpz_t x, mpz_t y, mpz_t N) {
-  mpz_t tmp, mp_u, and_op;
+  mpz_t tmp, mp_u, and_op, rho2, omega, one, x_tmp;
   int64_t i, j, l;
   uint64_t u;
   mpz_t *T;
 
+  mpz_init(x_tmp);
+  mpz_mod(x_tmp, x, N);
+
+  mpz_init(rho2);
+  mpz_init(omega);
+
+  mont_init(rho2, omega, N);
+  mont_mul(x_tmp, x_tmp, rho2, N, omega);
+
   // Preprocess results for y = 1,3,5..2^k - 1
   T = malloc(sizeof(mpz_t) << (K_BITS - 1));
-  mpz_init_set(T[0], x);
+  mpz_init_set(T[0], x_tmp);
   mpz_init(tmp);
-  mul_mod(tmp, x, x, N);
+  mont_mul(tmp, x_tmp, x_tmp, N, omega);
   for (i = 1; i < 1 << (K_BITS - 1); i++) {
     mpz_init(T[i]);
-    mul_mod(T[i], T[i - 1], tmp, N);
+    mont_mul(T[i], T[i - 1], tmp, N, omega);
   }
 
   mpz_init(mp_u);
   mpz_init(and_op);
   mpz_set_ui(tmp, 1);
+  mont_mul(tmp, tmp, rho2, N, omega);
+  mpz_init_set_ui(one, 1);
   // Set i to the size of y for 64-bit processors.
   i = y->_mp_size << 6;
 
@@ -52,14 +104,15 @@ void exp_mod(mpz_t r, mpz_t x, mpz_t y, mpz_t N) {
     }
     // t = t^(2^(i - l + 1))
     for (j = 0; j < i - l + 1; j++) {
-      mul_mod(tmp, tmp, tmp, N);
+      mont_mul(tmp, tmp, tmp, N, omega);
     }
     if (u != 0) {
       // Multiply by x^((u - 1)/2) (mod N)
-      mul_mod(tmp, tmp, T[(u - 1) >> 1], N);
+      mont_mul(tmp, tmp, T[(u - 1) >> 1], N, omega);
     }
     i = l - 1;
   }
+  mont_mul(tmp, tmp, one, N, omega);
   mpz_set(r, tmp);
 }
 
@@ -149,6 +202,7 @@ void stage2() {
     mpz_add(m, m_p, m_q);
     mpz_mod(m, m, N);
 
+//    exp_mod(m, c_p, d, N);
     // Print to stdout
     gmp_printf("%ZX\n", m);
 

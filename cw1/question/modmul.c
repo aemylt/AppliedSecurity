@@ -61,12 +61,15 @@ void exp_mod(mpz_t r, mpz_t x, mpz_t y, mpz_t N) {
   mpz_t *T;
 
   mpz_init(x_tmp);
-  mpz_mod(x_tmp, x, N);
+  mpz_set(x_tmp, x);
+  mpz_init_set_ui(one, 1);
 
   mpz_init(rho2);
   mpz_init(omega);
 
   mont_init(rho2, omega, N);
+  mont_mul(x_tmp, x_tmp, rho2, N, omega);
+  mont_mul(x_tmp, x_tmp, one, N, omega);
   mont_mul(x_tmp, x_tmp, rho2, N, omega);
 
   // Preprocess results for y = 1,3,5..2^k - 1
@@ -83,7 +86,6 @@ void exp_mod(mpz_t r, mpz_t x, mpz_t y, mpz_t N) {
   mpz_init(and_op);
   mpz_set_ui(tmp, 1);
   mont_mul(tmp, tmp, rho2, N, omega);
-  mpz_init_set_ui(one, 1);
   // Set i to the size of y for 64-bit processors.
   i = y->_mp_size << 6;
 

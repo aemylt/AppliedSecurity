@@ -10,6 +10,6 @@
 #include    <gmp.h>
 
 // Number of bits to use for sliding window.
-#define K_BITS 4
+#define K_BITS 6
 
 #endif

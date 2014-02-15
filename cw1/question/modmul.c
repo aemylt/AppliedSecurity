@@ -12,7 +12,8 @@ inline int test_bit(mpz_t y, int64_t i) {
   return (y->_mp_d[i >> 6] >> (i & 63)) & 1;
 }
 
-void mont_init(mpz_t rho2, mpz_t omega, mpz_t N) {
+// Create variables rho and omega for Montgomery methods
+void mont_init(mpz_t rho2, mpz_t rho3, mpz_t omega, mpz_t N) {
   uint64_t i;
   mpz_t sub_op;
   mpz_init_set_ui(sub_op, 1);
@@ -29,8 +30,14 @@ void mont_init(mpz_t rho2, mpz_t omega, mpz_t N) {
     mpz_add(rho2, rho2, rho2);
     if (mpz_cmp(rho2, N) > -1) mpz_sub(rho2, rho2, N);
   }
+  mpz_set(rho3, rho2);
+  for (i = 1; i <= N->_mp_size << 6; i++) {
+    mpz_add(rho3, rho3, rho3);
+    if (mpz_cmp(rho3, N) > -1) mpz_sub(rho3, rho3, N);
+  }
 }
 
+// Perform modular multiplication via Montgomery reduction
 void mont_mul(mpz_t r, mpz_t x, mpz_t y, mpz_t N, mpz_t omega) {
   mpz_t tmp, yi_x, u;
   uint64_t i;
@@ -53,24 +60,39 @@ void mont_mul(mpz_t r, mpz_t x, mpz_t y, mpz_t N, mpz_t omega) {
   mpz_set(r, tmp);
 }
 
+// Perform a modular operation via Montgomery Reduction
+void mont_red(mpz_t x, mpz_t N, mpz_t omega) {
+  mpz_t u;
+  uint64_t i;
+  mpz_init(u);
+  for (i = 0; i < N->_mp_size; i++) {
+    mpz_mul_ui(u, omega, (x->_mp_size > i) ? x->_mp_d[i] : 0);
+    mpz_set_ui(u, u->_mp_d[0]);
+    mpz_mul(u, u, N);
+    mpz_mul_2exp(u, u, i << 6);
+    mpz_add(x, x, u);
+  }
+  mpz_fdiv_q_2exp(x, x, N->_mp_size << 6);
+  if (mpz_cmp(x, N) > -1) mpz_sub(x, x, N);
+}
+
 // Compute r = x^y (mod N) via sliding window.
 void exp_mod(mpz_t r, mpz_t x, mpz_t y, mpz_t N) {
-  mpz_t tmp, mp_u, and_op, rho2, omega, one, x_tmp;
+  mpz_t tmp, mp_u, and_op, rho2, rho3, omega, x_tmp;
   int64_t i, j, l;
   uint64_t u;
   mpz_t *T;
 
   mpz_init(x_tmp);
   mpz_set(x_tmp, x);
-  mpz_init_set_ui(one, 1);
 
   mpz_init(rho2);
+  mpz_init(rho3);
   mpz_init(omega);
 
-  mont_init(rho2, omega, N);
-  mont_mul(x_tmp, x_tmp, rho2, N, omega);
-  mont_mul(x_tmp, x_tmp, one, N, omega);
-  mont_mul(x_tmp, x_tmp, rho2, N, omega);
+  mont_init(rho2, rho3, omega, N);
+  mont_mul(x_tmp, x_tmp, rho3, N, omega);
+  mont_red(x_tmp, N, omega);
 
   // Preprocess results for y = 1,3,5..2^k - 1
   T = malloc(sizeof(mpz_t) << (K_BITS - 1));
@@ -114,7 +136,7 @@ void exp_mod(mpz_t r, mpz_t x, mpz_t y, mpz_t N) {
     }
     i = l - 1;
   }
-  mont_mul(tmp, tmp, one, N, omega);
+  mont_red(tmp, N, omega);
   mpz_set(r, tmp);
 }
 

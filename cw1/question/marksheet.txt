@@ -16,7 +16,7 @@
 So that we can calibrate and improve the assignment in the future, give us
 a rough idea how long (in hours) you spent on it *in total*:
 
-effort : [7] hours
+effort : [14] hours
 
 -------------------------------------------------------------------------------
 
@@ -52,7 +52,7 @@ the style or efficiency of a solution.
     Extra   : implemented (and integrated) major optimisations
 [X]           - Chinese Remainder Theorem (CRT)                      ( 10%)
 [X]           - Non-binary (i.e., "windowed") exponentiation         ( 20%)
-[?]           - Montgomery multiplication                            ( 30%)
+[X]           - Montgomery multiplication                            ( 30%)
 
 
                                                                      ------

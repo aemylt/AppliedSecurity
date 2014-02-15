@@ -1,11 +1,5 @@
 #include "modmul.h"
 
-// Compute r = x * y (mod N)
-void mul_mod(mpz_t r, mpz_t x, mpz_t y, mpz_t N) {
-  mpz_mul(r, x, y);
-  mpz_mod(r, r, N);
-}
-
 // Inline function to test if the i-th bit of y is 1 or 0.
 // Does this by finding the (i / 64)-th limb of y and selecting the (i mod 64)-th bit from there.
 inline int test_bit(mpz_t y, int64_t i) {
@@ -40,7 +34,7 @@ void mont_init(mpz_t rho2, mpz_t rho3, mpz_t omega, mpz_t N) {
 // Perform modular multiplication via Montgomery reduction
 void mont_mul(mpz_t r, mpz_t x, mpz_t y, mpz_t N, mpz_t omega) {
   mpz_t tmp, yi_x, u;
-  uint64_t i;
+  uint64_t i, j;
   mpz_init_set_ui(tmp, 0);
   mpz_init(u);
   mpz_init(yi_x);
@@ -54,7 +48,10 @@ void mont_mul(mpz_t r, mpz_t x, mpz_t y, mpz_t N, mpz_t omega) {
     mpz_mul_ui(yi_x, x, (y->_mp_size > i) ? y->_mp_d[i] : 0);
     mpz_add(tmp, tmp, yi_x);
     mpz_add(tmp, tmp, u);
-    mpz_fdiv_q_2exp(tmp, tmp, 64);
+    for (j = 0; j < tmp->_mp_size - 1; j++) {
+      tmp->_mp_d[j] = tmp->_mp_d[j + 1];
+    }
+    tmp->_mp_size -= 1;
   }
   if (mpz_cmp(tmp, N) > -1) mpz_sub(tmp, tmp, N);
   mpz_set(r, tmp);
@@ -63,16 +60,18 @@ void mont_mul(mpz_t r, mpz_t x, mpz_t y, mpz_t N, mpz_t omega) {
 // Perform a modular operation via Montgomery Reduction
 void mont_red(mpz_t x, mpz_t N, mpz_t omega) {
   mpz_t u;
-  uint64_t i;
+  uint64_t i, j;
   mpz_init(u);
   for (i = 0; i < N->_mp_size; i++) {
-    mpz_mul_ui(u, omega, (x->_mp_size > i) ? x->_mp_d[i] : 0);
+    mpz_mul_ui(u, omega, x->_mp_d[0]);
     mpz_set_ui(u, u->_mp_d[0]);
     mpz_mul(u, u, N);
-    mpz_mul_2exp(u, u, i << 6);
     mpz_add(x, x, u);
+    for (j = 0; j < x->_mp_size - 1; j++) {
+      x->_mp_d[j] = x->_mp_d[j + 1];
+    }
+    x->_mp_size -= 1;
   }
-  mpz_fdiv_q_2exp(x, x, N->_mp_size << 6);
   if (mpz_cmp(x, N) > -1) mpz_sub(x, x, N);
 }
 
@@ -284,7 +283,8 @@ void stage3() {
     // c_2 = m * h^w (mod p)
     exp_mod(c_1, g, w, p);
     exp_mod(c_2, h, w, p);
-    mul_mod(c_2, m, c_2, p);
+    mpz_mul(c_2, c_2, m);
+    mpz_mod(c_2, c_2, p);
 
     // Print to stdout
     gmp_printf("%ZX\n", c_1);
@@ -328,7 +328,8 @@ void stage4() {
     // m = c_1^(q-x) * c_2 (mod p)
     mpz_sub(tmp, q, x);
     exp_mod(c_1, c_1, tmp, p);
-    mul_mod(m, c_1, c_2, p);
+    mpz_mul(m, c_1, c_2);
+    mpz_mod(m, m, p);
 
     // Print to stdout
     gmp_printf("%ZX\n", m);

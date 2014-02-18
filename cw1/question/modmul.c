@@ -165,23 +165,6 @@ void exp_mod_cube(mpz_t r, mpz_t x, mpz_t y, mpz_t N) {
   mont_red(r, N, omega);
 }
 
-// Compute r = x^y (mod N) via sliding window.
-void exp_mod(mpz_t r, mpz_t x, mpz_t y, mpz_t N) {
-  mpz_t rho2, omega, x_tmp;
-
-  mpz_init(x_tmp);
-  mpz_set(x_tmp, x);
-
-  mpz_init(rho2);
-  mpz_init(omega);
-
-  mont_init(rho2, omega, N);
-  mont_mul(x_tmp, x_tmp, rho2, N, omega);
-
-  exp_mod_mont(r, x_tmp, y, N, rho2, omega);
-  mont_red(r, N, omega);
-}
-
 /*
 Perform stage 1:
 
@@ -192,13 +175,15 @@ Perform stage 1:
 
 void stage1() {
 
-  mpz_t N, e, m, c;
+  mpz_t N, e, m, c, rho2, omega;
 
   // Initialise integers
   mpz_init(N);
   mpz_init(e);
   mpz_init(m);
   mpz_init(c);
+  mpz_init(rho2);
+  mpz_init(omega);
 
   // Repeat until we reach end of stream
   while(gmp_scanf("%ZX", N) > 0) {
@@ -207,7 +192,10 @@ void stage1() {
     gmp_scanf("%ZX", m);
 
     // c = m^e (mod N)
-    exp_mod(c, m, e, N);
+    mont_init(rho2, omega, N);
+    mont_mul(m, m, rho2, N, omega);
+    exp_mod_mont(c, m, e, N, rho2, omega);
+    mont_red(c, N, omega);
 
     // Print to stdout
     gmp_printf("%ZX\n", c);

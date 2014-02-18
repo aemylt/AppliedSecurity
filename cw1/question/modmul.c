@@ -7,7 +7,7 @@ inline int test_bit(mpz_t y, int64_t i) {
 }
 
 // Create variables rho and omega for Montgomery methods
-void mont_init(mpz_t rho2, mpz_t rho3, mpz_t omega, mpz_t N) {
+void mont_init_cube(mpz_t rho2, mpz_t rho3, mpz_t omega, mpz_t N) {
   uint64_t i;
   mpz_t sub_op;
   mpz_init_set_ui(sub_op, 1);
@@ -28,6 +28,26 @@ void mont_init(mpz_t rho2, mpz_t rho3, mpz_t omega, mpz_t N) {
   for (i = 1; i <= N->_mp_size << 6; i++) {
     mpz_add(rho3, rho3, rho3);
     if (mpz_cmp(rho3, N) > -1) mpz_sub(rho3, rho3, N);
+  }
+}
+
+// Create variables rho and omega for Montgomery methods
+void mont_init(mpz_t rho2, mpz_t omega, mpz_t N) {
+  uint64_t i;
+  mpz_t sub_op;
+  mpz_init_set_ui(sub_op, 1);
+  mpz_mul_2exp(sub_op, sub_op, 64);
+  mpz_set_ui(omega, 1);
+  for (i = 1; i < 64; i++) {
+    mpz_mul(omega, omega, omega);
+    mpz_mul(omega, omega, N);
+    mpz_set_ui(omega, omega->_mp_d[0]);
+  }
+  mpz_sub(omega, sub_op, omega);
+  mpz_set_ui(rho2, 1);
+  for (i = 1; i <= N->_mp_size << 7; i++) {
+    mpz_add(rho2, rho2, rho2);
+    if (mpz_cmp(rho2, N) > -1) mpz_sub(rho2, rho2, N);
   }
 }
 
@@ -137,7 +157,7 @@ void exp_mod(mpz_t r, mpz_t x, mpz_t y, mpz_t N) {
   mpz_init(rho3);
   mpz_init(omega);
 
-  mont_init(rho2, rho3, omega, N);
+  mont_init_cube(rho2, rho3, omega, N);
   mont_mul(x_tmp, x_tmp, rho3, N, omega);
   mont_red(x_tmp, N, omega);
 
@@ -249,7 +269,7 @@ Perform stage 3:
 
 void stage3() {
 
-  mpz_t p, q, g, h, m, c_1, c_2, w, rho2, rho3, omega;
+  mpz_t p, q, g, h, m, c_1, c_2, w, rho2, omega;
 #ifndef DEBUG
   gmp_randstate_t state;
 #endif
@@ -263,7 +283,6 @@ void stage3() {
   mpz_init(c_1);
   mpz_init(c_2);
   mpz_init(rho2);
-  mpz_init(rho3);
   mpz_init(omega);
 
 #ifndef DEBUG
@@ -290,7 +309,7 @@ void stage3() {
 
     // c_1 = g^w (mod p)
     // c_2 = m * h^w (mod p)
-    mont_init(rho2, rho3, omega, p);
+    mont_init(rho2, omega, p);
     mont_mul(g, g, rho2, p, omega);
     exp_mod_mont(c_1, g, w, p, rho2, omega);
     mont_red(c_1, p, omega);
@@ -319,7 +338,7 @@ Perform stage 4:
 
 void stage4() {
 
-  mpz_t p, q, g, x, c_1, c_2, m, tmp, rho2, rho3, omega;
+  mpz_t p, q, g, x, c_1, c_2, m, tmp, rho2, omega;
 
   // Initialise integers
   mpz_init(p);
@@ -331,7 +350,6 @@ void stage4() {
   mpz_init(m);
   mpz_init(tmp);
   mpz_init(rho2);
-  mpz_init(rho3);
   mpz_init(omega);
 
   // Repeat until we reach end of stream
@@ -344,7 +362,7 @@ void stage4() {
     gmp_scanf("%ZX", c_2);
 
     // m = c_1^(q-x) * c_2 (mod p)
-    mont_init(rho2, rho3, omega, p);
+    mont_init(rho2, omega, p);
     mpz_sub(tmp, q, x);
 
     mont_mul(c_1, c_1, rho2, p, omega);

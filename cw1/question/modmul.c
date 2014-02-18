@@ -147,7 +147,7 @@ void exp_mod_mont(mpz_t r, mpz_t x, mpz_t y, mpz_t N, mpz_t rho2, mpz_t omega) {
 }
 
 // Compute r = x^y (mod N) via sliding window.
-void exp_mod(mpz_t r, mpz_t x, mpz_t y, mpz_t N) {
+void exp_mod_cube(mpz_t r, mpz_t x, mpz_t y, mpz_t N) {
   mpz_t rho2, rho3, omega, x_tmp;
 
   mpz_init(x_tmp);
@@ -160,6 +160,23 @@ void exp_mod(mpz_t r, mpz_t x, mpz_t y, mpz_t N) {
   mont_init_cube(rho2, rho3, omega, N);
   mont_mul(x_tmp, x_tmp, rho3, N, omega);
   mont_red(x_tmp, N, omega);
+
+  exp_mod_mont(r, x_tmp, y, N, rho2, omega);
+  mont_red(r, N, omega);
+}
+
+// Compute r = x^y (mod N) via sliding window.
+void exp_mod(mpz_t r, mpz_t x, mpz_t y, mpz_t N) {
+  mpz_t rho2, omega, x_tmp;
+
+  mpz_init(x_tmp);
+  mpz_set(x_tmp, x);
+
+  mpz_init(rho2);
+  mpz_init(omega);
+
+  mont_init(rho2, omega, N);
+  mont_mul(x_tmp, x_tmp, rho2, N, omega);
 
   exp_mod_mont(r, x_tmp, y, N, rho2, omega);
   mont_red(r, N, omega);
@@ -238,9 +255,9 @@ void stage2() {
     gmp_scanf("%ZX", c);
 
     // m_p = c^d (mod p)
-    exp_mod(m_p, c, d_p, p);
+    exp_mod_cube(m_p, c, d_p, p);
     // m_q = c^d (mod q)
-    exp_mod(m_q, c, d_q, q);
+    exp_mod_cube(m_q, c, d_q, q);
 
     // Compute chinese remainder theorem:
     // m = (m_p * q * q^-1 (mod p)) + (m_q * p * p^-1 (mod q)) (mod N)

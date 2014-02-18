@@ -75,29 +75,17 @@ void mont_red(mpz_t x, mpz_t N, mpz_t omega) {
   if (mpz_cmp(x, N) > -1) mpz_sub(x, x, N);
 }
 
-// Compute r = x^y (mod N) via sliding window.
-void exp_mod(mpz_t r, mpz_t x, mpz_t y, mpz_t N) {
-  mpz_t tmp, mp_u, and_op, rho2, rho3, omega, x_tmp;
+void exp_mod_mont(mpz_t r, mpz_t x, mpz_t y, mpz_t N, mpz_t rho2, mpz_t omega) {
+  mpz_t tmp, mp_u, and_op;
   int64_t i, j, l;
   uint64_t u;
   mpz_t *T;
 
-  mpz_init(x_tmp);
-  mpz_set(x_tmp, x);
-
-  mpz_init(rho2);
-  mpz_init(rho3);
-  mpz_init(omega);
-
-  mont_init(rho2, rho3, omega, N);
-  mont_mul(x_tmp, x_tmp, rho3, N, omega);
-  mont_red(x_tmp, N, omega);
-
   // Preprocess results for y = 1,3,5..2^k - 1
   T = malloc(sizeof(mpz_t) << (K_BITS - 1));
-  mpz_init_set(T[0], x_tmp);
+  mpz_init_set(T[0], x);
   mpz_init(tmp);
-  mont_mul(tmp, x_tmp, x_tmp, N, omega);
+  mont_mul(tmp, x, x, N, omega);
   for (i = 1; i < 1 << (K_BITS - 1); i++) {
     mpz_init(T[i]);
     mont_mul(T[i], T[i - 1], tmp, N, omega);
@@ -135,8 +123,26 @@ void exp_mod(mpz_t r, mpz_t x, mpz_t y, mpz_t N) {
     }
     i = l - 1;
   }
-  mont_red(tmp, N, omega);
   mpz_set(r, tmp);
+}
+
+// Compute r = x^y (mod N) via sliding window.
+void exp_mod(mpz_t r, mpz_t x, mpz_t y, mpz_t N) {
+  mpz_t rho2, rho3, omega, x_tmp;
+
+  mpz_init(x_tmp);
+  mpz_set(x_tmp, x);
+
+  mpz_init(rho2);
+  mpz_init(rho3);
+  mpz_init(omega);
+
+  mont_init(rho2, rho3, omega, N);
+  mont_mul(x_tmp, x_tmp, rho3, N, omega);
+  mont_red(x_tmp, N, omega);
+
+  exp_mod_mont(r, x_tmp, y, N, rho2, omega);
+  mont_red(r, N, omega);
 }
 
 /*
@@ -243,7 +249,7 @@ Perform stage 3:
 
 void stage3() {
 
-  mpz_t p, q, g, h, m, c_1, c_2, w;
+  mpz_t p, q, g, h, m, c_1, c_2, w, rho2, rho3, omega;
 #ifndef DEBUG
   gmp_randstate_t state;
 #endif
@@ -256,6 +262,9 @@ void stage3() {
   mpz_init(m);
   mpz_init(c_1);
   mpz_init(c_2);
+  mpz_init(rho2);
+  mpz_init(rho3);
+  mpz_init(omega);
 
 #ifndef DEBUG
   mpz_init(w);
@@ -281,10 +290,16 @@ void stage3() {
 
     // c_1 = g^w (mod p)
     // c_2 = m * h^w (mod p)
-    exp_mod(c_1, g, w, p);
-    exp_mod(c_2, h, w, p);
-    mpz_mul(c_2, c_2, m);
-    mpz_mod(c_2, c_2, p);
+    mont_init(rho2, rho3, omega, p);
+    mont_mul(g, g, rho2, p, omega);
+    exp_mod_mont(c_1, g, w, p, rho2, omega);
+    mont_red(c_1, p, omega);
+
+    mont_mul(h, h, rho2, p, omega);
+    exp_mod_mont(c_2, h, w, p, rho2, omega);
+    mont_mul(m, m, rho2, p, omega);
+    mont_mul(c_2, c_2, m, p, omega);
+    mont_red(c_2, p, omega);
 
     // Print to stdout
     gmp_printf("%ZX\n", c_1);
@@ -304,7 +319,7 @@ Perform stage 4:
 
 void stage4() {
 
-  mpz_t p, q, g, x, c_1, c_2, m, tmp;
+  mpz_t p, q, g, x, c_1, c_2, m, tmp, rho2, rho3, omega;
 
   // Initialise integers
   mpz_init(p);
@@ -315,6 +330,9 @@ void stage4() {
   mpz_init(c_2);
   mpz_init(m);
   mpz_init(tmp);
+  mpz_init(rho2);
+  mpz_init(rho3);
+  mpz_init(omega);
 
   // Repeat until we reach end of stream
   while (gmp_scanf("%ZX", p) > 0) {
@@ -326,10 +344,14 @@ void stage4() {
     gmp_scanf("%ZX", c_2);
 
     // m = c_1^(q-x) * c_2 (mod p)
+    mont_init(rho2, rho3, omega, p);
     mpz_sub(tmp, q, x);
-    exp_mod(c_1, c_1, tmp, p);
-    mpz_mul(m, c_1, c_2);
-    mpz_mod(m, m, p);
+
+    mont_mul(c_1, c_1, rho2, p, omega);
+    exp_mod_mont(m, c_1, tmp, p, rho2, omega);
+    mont_mul(c_2, c_2, rho2, p, omega);
+    mont_mul(m, m, c_2, p, omega);
+    mont_red(m, p, omega);
 
     // Print to stdout
     gmp_printf("%ZX\n", m);

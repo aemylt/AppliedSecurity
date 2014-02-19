@@ -3,7 +3,7 @@
 // Inline function to test if the i-th bit of y is 1 or 0.
 // Does this by finding the (i / 64)-th limb of y and selecting the (i mod 64)-th bit from there.
 inline int test_bit(mpz_t y, int64_t i) {
-  return (y->_mp_d[i >> 6] >> (i & 63)) & 1;
+  return (y->_mp_size > i >> 6) ? (y->_mp_d[i >> 6] >> (i & 63)) & 1 : 0;
 }
 
 // Create variables rho and omega for Montgomery methods
@@ -85,7 +85,7 @@ void mont_red(mpz_t x, mpz_t N, uint64_t omega) {
 void exp_mod_mont(mpz_t r, mpz_t x, mpz_t y, mpz_t N, mpz_t rho2, uint64_t omega) {
   mpz_t tmp;
   int64_t i, j, l, i_digit, i_bit, l_digit, l_bit;
-  uint64_t u, y_i, y_l;
+  uint64_t u;
   mpz_t *T;
 
   // Preprocess results for y = 1,3,5..2^k - 1
@@ -114,14 +114,8 @@ void exp_mod_mont(mpz_t r, mpz_t x, mpz_t y, mpz_t N, mpz_t rho2, uint64_t omega
       i_bit = i & 63;
       l_digit = l >> 6;
       l_bit = l & 63;
-      if (i_digit == l_digit) {
-        y_i = (y->_mp_size > i_digit) ? y->_mp_d[i_digit] : 0;
-        u = (y_i << (63 - i_bit)) >> (63 - i_bit + l_bit);
-      } else {
-        y_i = (y->_mp_size > i_digit) ? y->_mp_d[i_digit] : 0;
-        y_l = (y->_mp_size > l_digit) ? y->_mp_d[l_digit] : 0;
-        u = ( y_l >> l_bit) | (((y_i << (63 - i_bit)) >> (63 - i_bit)) << (64 - l_bit));
-      }
+      if (i_digit == l_digit) u = (y->_mp_d[i_digit] << (63 - i_bit)) >> (63 - i_bit + l_bit);
+      else u = ( y->_mp_d[l_digit] >> l_bit) | (((y->_mp_d[i_digit] << (63 - i_bit)) >> (63 - i_bit)) << (64 - l_bit));
     } else {
       l = i;
       u = 0;

@@ -9,9 +9,6 @@ inline int test_bit(mpz_t y, int64_t i) {
 // Create variables rho and omega for Montgomery methods
 void mont_init_cube(mpz_t rho2, mpz_t rho3, uint64_t *omega, mpz_t N) {
   uint64_t i, tmp;
-  mpz_t sub_op;
-  mpz_init_set_ui(sub_op, 1);
-  mpz_mul_2exp(sub_op, sub_op, 64);
   tmp = 1;
   for (i = 1; i < 64; i++) {
     tmp *= tmp;
@@ -33,9 +30,6 @@ void mont_init_cube(mpz_t rho2, mpz_t rho3, uint64_t *omega, mpz_t N) {
 // Create variables rho and omega for Montgomery methods
 void mont_init(mpz_t rho2, uint64_t *omega, mpz_t N) {
   uint64_t i, tmp;
-  mpz_t sub_op;
-  mpz_init_set_ui(sub_op, 1);
-  mpz_mul_2exp(sub_op, sub_op, 64);
   tmp = 1;
   for (i = 1; i < 64; i++) {
     tmp *= tmp;
@@ -150,8 +144,7 @@ void exp_mod_cube(mpz_t r, mpz_t x, mpz_t y, mpz_t N) {
   mpz_t rho2, rho3, x_tmp;
   uint64_t omega;
 
-  mpz_init(x_tmp);
-  mpz_set(x_tmp, x);
+  mpz_init_set(x_tmp, x);
 
   mpz_init(rho2);
   mpz_init(rho3);

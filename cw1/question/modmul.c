@@ -6,6 +6,12 @@ inline int test_bit(mpz_t y, int64_t i) {
   return (y->_mp_size > i >> 6) ? (y->_mp_d[i >> 6] >> (i & 63)) & 1 : 0;
 }
 
+inline int compare(mpz_t x, mpz_t y) {
+  if (x->_mp_size > y->_mp_size) return 1;
+  else if (y->_mp_size > x->_mp_size) return -1;
+  else return mpn_cmp(x->_mp_d, y->_mp_d, x->_mp_size);
+}
+
 // Create variables rho and omega for Montgomery methods
 void mont_init_cube(mpz_t rho2, mpz_t rho3, uint64_t *omega, mpz_t N) {
   uint64_t i, tmp;
@@ -18,12 +24,12 @@ void mont_init_cube(mpz_t rho2, mpz_t rho3, uint64_t *omega, mpz_t N) {
   mpz_set_ui(rho2, 1);
   for (i = 1; i <= N->_mp_size << 7; i++) {
     mpz_add(rho2, rho2, rho2);
-    if (mpz_cmp(rho2, N) > -1) mpz_sub(rho2, rho2, N);
+    if (compare(rho2, N) > -1) mpz_sub(rho2, rho2, N);
   }
   mpz_set(rho3, rho2);
   for (i = 1; i <= N->_mp_size << 6; i++) {
     mpz_add(rho3, rho3, rho3);
-    if (mpz_cmp(rho3, N) > -1) mpz_sub(rho3, rho3, N);
+    if (compare(rho3, N) > -1) mpz_sub(rho3, rho3, N);
   }
 }
 
@@ -39,7 +45,7 @@ void mont_init(mpz_t rho2, uint64_t *omega, mpz_t N) {
   mpz_set_ui(rho2, 1);
   for (i = 1; i <= N->_mp_size << 7; i++) {
     mpz_add(rho2, rho2, rho2);
-    if (mpz_cmp(rho2, N) > -1) mpz_sub(rho2, rho2, N);
+    if (compare(rho2, N) > -1) mpz_sub(rho2, rho2, N);
   }
 }
 
@@ -61,7 +67,7 @@ void mont_mul(mpz_t r, mpz_t x, mpz_t y, mpz_t N, uint64_t omega) {
     }
     tmp->_mp_size -= 1;
   }
-  if (mpz_cmp(tmp, N) > -1) mpz_sub(tmp, tmp, N);
+  if (compare(tmp, N) > -1) mpz_sub(tmp, tmp, N);
   mpz_set(r, tmp);
 }
 
@@ -79,7 +85,7 @@ void mont_red(mpz_t x, mpz_t N, uint64_t omega) {
     }
     x->_mp_size -= 1;
   }
-  if (mpz_cmp(x, N) > -1) mpz_sub(x, x, N);
+  if (compare(x, N) > -1) mpz_sub(x, x, N);
 }
 
 void exp_mod_mont(mpz_t r, mpz_t x, mpz_t y, mpz_t N, mpz_t rho2, uint64_t omega) {

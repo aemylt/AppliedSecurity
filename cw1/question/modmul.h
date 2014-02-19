@@ -8,6 +8,7 @@
 #include <string.h>
 
 #include    <gmp.h>
+#include <inttypes.h>
 
 // Number of bits to use for sliding window.
 #define K_BITS 6

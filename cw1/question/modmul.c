@@ -89,8 +89,8 @@ void mont_red(mpz_t x, mpz_t N, uint64_t omega) {
 }
 
 void exp_mod_mont(mpz_t r, mpz_t x, mpz_t y, mpz_t N, mpz_t rho2, uint64_t omega) {
-  mpz_t tmp, mp_u, and_op;
-  int64_t i, j, l;
+  mpz_t tmp;
+  int64_t i, j, l, i_digit, i_bit, l_digit, l_bit;
   uint64_t u;
   mpz_t *T;
 
@@ -104,8 +104,6 @@ void exp_mod_mont(mpz_t r, mpz_t x, mpz_t y, mpz_t N, mpz_t rho2, uint64_t omega
     mont_mul(T[i], T[i - 1], tmp, N, omega);
   }
 
-  mpz_init(mp_u);
-  mpz_init(and_op);
   mpz_set_ui(tmp, 1);
   mont_mul(tmp, tmp, rho2, N, omega);
   // Set i to the size of y for 64-bit processors.
@@ -118,10 +116,13 @@ void exp_mod_mont(mpz_t r, mpz_t x, mpz_t y, mpz_t N, mpz_t rho2, uint64_t omega
       if (l < 0) l = 0;
       while (!test_bit(y, l)) l++;
       // Calculate u by shifting right l bits and performing a bitwise AND with 2^(i - l + 1) - 1.
-      mpz_fdiv_q_2exp(mp_u, y, l);
-      mpz_set_ui(and_op, (1 << (i - l + 1)) - 1);
-      mpz_and(mp_u, mp_u, and_op);
-      u = mpz_get_ui(mp_u);
+      i_digit = i >> 6;
+      i_bit = i & 63;
+      l_digit = l >> 6;
+      l_bit = l & 63;
+      if (i_digit == l_digit) u = (y->_mp_d[i_digit] << (63 - i_bit)) >> (63 - i_bit + l_bit);
+      else u = (y->_mp_d[l_digit] >> l_bit) | (((y->_mp_d[i_digit] << (63 - i_bit)) >> (63 - i_bit)) << (64 - l_bit));
+      printf("%" PRId64 ", %" PRId64 ", %" PRIu64 "\n", i, l, u);
     } else {
       l = i;
       u = 0;

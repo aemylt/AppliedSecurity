@@ -22,7 +22,7 @@ void mont_init_cube(mpz_t rho2, mpz_t rho3, uint64_t *omega, mpz_t N) {
   }
   *omega = 0 - tmp;
   mpz_set_ui(rho2, 1);
-  _mpz_realloc(rho2, N->_mp_size << 1);
+  _mpz_realloc(rho2, (N->_mp_size << 1) + 1);
   for (i = 1; i <= N->_mp_size << 7; i++) {
     result = mpn_lshift(rho2->_mp_d, rho2->_mp_d, rho2->_mp_size, 1);
     if (result) {
@@ -32,7 +32,6 @@ void mont_init_cube(mpz_t rho2, mpz_t rho3, uint64_t *omega, mpz_t N) {
     if (compare(rho2, N) > -1) mpz_sub(rho2, rho2, N);
   }
   mpz_set(rho3, rho2);
-  _mpz_realloc(rho2, N->_mp_size << 1);
   for (i = 1; i <= N->_mp_size << 6; i++) {
     result = mpn_lshift(rho3->_mp_d, rho3->_mp_d, rho3->_mp_size, 1);
     if (result) {
@@ -53,7 +52,7 @@ void mont_init(mpz_t rho2, uint64_t *omega, mpz_t N) {
   }
   *omega = 0 - tmp;
   mpz_set_ui(rho2, 1);
-  _mpz_realloc(rho2, N->_mp_size << 1);
+  _mpz_realloc(rho2, (N->_mp_size << 1) + 1);
   for (i = 1; i <= N->_mp_size << 7; i++) {
     result = mpn_lshift(rho2->_mp_d, rho2->_mp_d, rho2->_mp_size, 1);
     if (result) {

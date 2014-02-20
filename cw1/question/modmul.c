@@ -6,31 +6,17 @@ inline int test_bit(mpz_t y, int64_t i) {
   return (y->_mp_size > i >> 6) ? (y->_mp_d[i >> 6] >> (i & 63)) & 1 : 0;
 }
 
+// Inline function to check if one value is greater than the other
+// Will check if the sizes match, and if they do then run mpn_cmp
 inline int compare(mpz_t x, mpz_t y) {
   if (x->_mp_size > y->_mp_size) return 1;
   else if (y->_mp_size > x->_mp_size) return -1;
   else return mpn_cmp(x->_mp_d, y->_mp_d, x->_mp_size);
 }
 
-// Create variables rho and omega for Montgomery methods
-void mont_init_cube(mpz_t rho2, mpz_t rho3, uint64_t *omega, mpz_t N) {
-  uint64_t i, tmp, result;
-  tmp = 1;
-  for (i = 1; i < 64; i++) {
-    tmp *= tmp;
-    tmp *= N->_mp_d[0];
-  }
-  *omega = 0 - tmp;
-  mpz_set_ui(rho2, 1);
-  _mpz_realloc(rho2, (N->_mp_size << 1) + 1);
-  for (i = 1; i <= N->_mp_size << 7; i++) {
-    result = mpn_lshift(rho2->_mp_d, rho2->_mp_d, rho2->_mp_size, 1);
-    if (result) {
-      rho2->_mp_d[rho2->_mp_size] = result;
-      rho2->_mp_size++;
-    }
-    if (compare(rho2, N) > -1) mpz_sub(rho2, rho2, N);
-  }
+// Computer rho^3 for Chinese Remainder Theorem
+void mont_init_cube(mpz_t rho2, mpz_t rho3, mpz_t N) {
+  uint64_t i, result;
   mpz_set(rho3, rho2);
   for (i = 1; i <= N->_mp_size << 6; i++) {
     result = mpn_lshift(rho3->_mp_d, rho3->_mp_d, rho3->_mp_size, 1);
@@ -42,15 +28,17 @@ void mont_init_cube(mpz_t rho2, mpz_t rho3, uint64_t *omega, mpz_t N) {
   }
 }
 
-// Create variables rho and omega for Montgomery methods
+// Compute variables rho^2 and omega for Montgomery methods
 void mont_init(mpz_t rho2, uint64_t *omega, mpz_t N) {
   uint64_t i, tmp, result;
+  // Compute omega = -N^-1 (mod b)
   tmp = 1;
   for (i = 1; i < 64; i++) {
     tmp *= tmp;
     tmp *= N->_mp_d[0];
   }
-  *omega = 0 - tmp;
+  *omega = -tmp;
+  // Compute rho^2 (mod N)
   mpz_set_ui(rho2, 1);
   _mpz_realloc(rho2, (N->_mp_size << 1) + 1);
   for (i = 1; i <= N->_mp_size << 7; i++) {
@@ -104,6 +92,7 @@ void mont_red(mpz_t x, mpz_t N, uint64_t omega) {
   mpz_clear(tmp);
 }
 
+// Perform modular exponentiation via Sliding Window with Montgomery Multiplication
 void exp_mod_mont(mpz_t r, mpz_t x, mpz_t y, mpz_t N, mpz_t rho2, uint64_t omega) {
   mpz_t tmp;
   int64_t i, j, l, i_digit, i_bit, l_digit, l_bit;
@@ -131,7 +120,7 @@ void exp_mod_mont(mpz_t r, mpz_t x, mpz_t y, mpz_t N, mpz_t rho2, uint64_t omega
       l = i - K_BITS + 1;
       if (l < 0) l = 0;
       while (!test_bit(y, l)) l++;
-      // Calculate u by shifting right l bits and performing a bitwise AND with 2^(i - l + 1) - 1.
+      // Calculate u
       i_digit = i >> 6;
       i_bit = i & 63;
       l_digit = l >> 6;
@@ -159,8 +148,10 @@ void exp_mod_mont(mpz_t r, mpz_t x, mpz_t y, mpz_t N, mpz_t rho2, uint64_t omega
   }
 }
 
-// Compute r = x^y (mod N) via sliding window.
-void exp_mod_cube(mpz_t r, mpz_t x, mpz_t y, mpz_t N) {
+// Prepare modular exponentiation
+// Used in stage2 as c might be greater than or equal to
+// p or q
+void exp_mod_crt(mpz_t r, mpz_t x, mpz_t y, mpz_t N) {
   mpz_t rho2, rho3, x_tmp;
   uint64_t omega;
 
@@ -169,7 +160,8 @@ void exp_mod_cube(mpz_t r, mpz_t x, mpz_t y, mpz_t N) {
   mpz_init(rho2);
   mpz_init(rho3);
 
-  mont_init_cube(rho2, rho3, &omega, N);
+  mont_init(rho2, &omega, N);
+  mont_init_cube(rho2, rho3, N);
   mont_mul(x_tmp, x_tmp, rho3, N, omega);
   mont_red(x_tmp, N, omega);
 
@@ -265,9 +257,9 @@ void stage2() {
     gmp_scanf("%ZX", c);
 
     // m_p = c^d (mod p)
-    exp_mod_cube(m_p, c, d_p, p);
+    exp_mod_crt(m_p, c, d_p, p);
     // m_q = c^d (mod q)
-    exp_mod_cube(m_q, c, d_q, q);
+    exp_mod_crt(m_q, c, d_q, q);
 
     // Compute chinese remainder theorem:
     // m = (m_p * q * q^-1 (mod p)) + (m_q * p * p^-1 (mod q)) (mod N)

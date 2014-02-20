@@ -52,7 +52,7 @@ void mont_init(mpz_t rho2, uint64_t *omega, mpz_t N) {
 // Perform modular multiplication via Montgomery reduction
 void mont_mul(mpz_t r, mpz_t x, mpz_t y, mpz_t N, uint64_t omega) {
   mpz_t tmp, t, yi_x;
-  uint64_t i, j, u;
+  uint64_t i, u;
   mpz_init_set_ui(tmp, 0);
   mpz_init(yi_x);
   mpz_init(t);
@@ -62,9 +62,8 @@ void mont_mul(mpz_t r, mpz_t x, mpz_t y, mpz_t N, uint64_t omega) {
     mpz_mul_ui(yi_x, x, (y->_mp_size > i) ? y->_mp_d[i] : 0);
     mpz_add(tmp, tmp, yi_x);
     mpz_add(tmp, tmp, t);
-    for (j = 0; j < tmp->_mp_size - 1; j++) {
-      tmp->_mp_d[j] = tmp->_mp_d[j + 1];
-    }
+    mpn_rshift(tmp->_mp_d, tmp->_mp_d, tmp->_mp_size, 32);
+    mpn_rshift(tmp->_mp_d, tmp->_mp_d, tmp->_mp_size, 32);
     tmp->_mp_size -= 1;
   }
   if (compare(tmp, N) > -1) mpz_sub(tmp, tmp, N);
@@ -73,16 +72,15 @@ void mont_mul(mpz_t r, mpz_t x, mpz_t y, mpz_t N, uint64_t omega) {
 
 // Perform a modular operation via Montgomery Reduction
 void mont_red(mpz_t x, mpz_t N, uint64_t omega) {
-  uint64_t i, j, u;
+  uint64_t i, u;
   mpz_t tmp;
   mpz_init(tmp);
   for (i = 0; i < N->_mp_size; i++) {
     u = x->_mp_d[0] * omega;
     mpz_mul_ui(tmp, N, u);
     mpz_add(x, x, tmp);
-    for (j = 0; j < x->_mp_size - 1; j++) {
-      x->_mp_d[j] = x->_mp_d[j + 1];
-    }
+    mpn_rshift(x->_mp_d, x->_mp_d, x->_mp_size, 32);
+    mpn_rshift(x->_mp_d, x->_mp_d, x->_mp_size, 32);
     x->_mp_size -= 1;
   }
   if (compare(x, N) > -1) mpz_sub(x, x, N);

@@ -82,6 +82,9 @@ void mont_mul(mpz_t r, mpz_t x, mpz_t y, mpz_t N, uint64_t omega) {
   }
   if (compare(tmp, N) > -1) mpz_sub(tmp, tmp, N);
   mpz_set(r, tmp);
+  mpz_clear(tmp);
+  mpz_clear(yi_x);
+  mpz_clear(t);
 }
 
 // Perform a modular operation via Montgomery Reduction
@@ -98,6 +101,7 @@ void mont_red(mpz_t x, mpz_t N, uint64_t omega) {
     x->_mp_size -= 1;
   }
   if (compare(x, N) > -1) mpz_sub(x, x, N);
+  mpz_clear(tmp);
 }
 
 void exp_mod_mont(mpz_t r, mpz_t x, mpz_t y, mpz_t N, mpz_t rho2, uint64_t omega) {
@@ -149,6 +153,10 @@ void exp_mod_mont(mpz_t r, mpz_t x, mpz_t y, mpz_t N, mpz_t rho2, uint64_t omega
     i = l - 1;
   }
   mpz_set(r, tmp);
+  mpz_clear(tmp);
+  for (i = 0; i < 1 << (K_BITS - 1); i++) {
+    mpz_clear(T[i]);
+  }
 }
 
 // Compute r = x^y (mod N) via sliding window.
@@ -167,6 +175,10 @@ void exp_mod_cube(mpz_t r, mpz_t x, mpz_t y, mpz_t N) {
 
   exp_mod_mont(r, x_tmp, y, N, rho2, omega);
   mont_red(r, N, omega);
+
+  mpz_clear(rho2);
+  mpz_clear(rho3);
+  mpz_clear(x_tmp);
 }
 
 /*
@@ -205,6 +217,12 @@ void stage1() {
     gmp_printf("%ZX\n", c);
 
   }
+
+  mpz_clear(N);
+  mpz_clear(e);
+  mpz_clear(m);
+  mpz_clear(c);
+  mpz_clear(rho2);
 
 }
 
@@ -265,6 +283,19 @@ void stage2() {
     gmp_printf("%ZX\n", m);
 
   }
+
+  mpz_clear(N);
+  mpz_clear(d);
+  mpz_clear(p);
+  mpz_clear(q);
+  mpz_clear(d_p);
+  mpz_clear(d_q);
+  mpz_clear(i_p);
+  mpz_clear(i_q);
+  mpz_clear(c);
+  mpz_clear(m_p);
+  mpz_clear(m_q);
+  mpz_clear(m);
 
 }
 
@@ -335,6 +366,16 @@ void stage3() {
 
   }
 
+  mpz_clear(p);
+  mpz_clear(q);
+  mpz_clear(g);
+  mpz_clear(h);
+  mpz_clear(m);
+  mpz_clear(c_1);
+  mpz_clear(c_2);
+  mpz_clear(rho2);
+  mpz_clear(w);
+
 }
 
 /*
@@ -384,6 +425,16 @@ void stage4() {
     gmp_printf("%ZX\n", m);
 
   }
+
+  mpz_clear(p);
+  mpz_clear(q);
+  mpz_clear(g);
+  mpz_clear(x);
+  mpz_clear(c_1);
+  mpz_clear(c_2);
+  mpz_clear(m);
+  mpz_clear(tmp);
+  mpz_clear(rho2);
 
 }
 

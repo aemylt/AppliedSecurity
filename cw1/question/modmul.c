@@ -22,8 +22,10 @@ void mont_init_cube(mpz_t rho2, mpz_t rho3, uint64_t *omega, mpz_t N) {
   }
   *omega = 0 - tmp;
   mpz_set_ui(rho2, 1);
+  _mpz_realloc(rho2, N->_mp_size << 1);
   for (i = 1; i <= N->_mp_size << 7; i++) {
-    mpz_add(rho2, rho2, rho2);
+    mpn_lshift(rho2->_mp_d, rho2->_mp_d, rho2->_mp_size + 1, 1);
+    if (rho2->_mp_d[rho2->_mp_size]) rho2->_mp_size++;
     if (compare(rho2, N) > -1) mpz_sub(rho2, rho2, N);
   }
   mpz_set(rho3, rho2);
@@ -31,6 +33,7 @@ void mont_init_cube(mpz_t rho2, mpz_t rho3, uint64_t *omega, mpz_t N) {
     mpz_add(rho3, rho3, rho3);
     if (compare(rho3, N) > -1) mpz_sub(rho3, rho3, N);
   }
+  gmp_printf("%Zd\n\n%Zd\n", rho2, rho3);
 }
 
 // Create variables rho and omega for Montgomery methods

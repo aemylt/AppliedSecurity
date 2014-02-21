@@ -194,10 +194,7 @@ void stage1() {
   mpz_init(rho2);
 
   // Repeat until we reach end of stream
-  while(gmp_scanf("%ZX", N) > 0) {
-
-    gmp_scanf("%ZX", e);
-    gmp_scanf("%ZX", m);
+  while(gmp_scanf("%ZX%ZX%ZX", N, e, m) == 3) {
 
     // c = m^e (mod N)
     mont_init(rho2, &omega, N);
@@ -245,16 +242,7 @@ void stage2() {
   mpz_init(m);
 
   // Repeat until we reach end of stream
-  while (gmp_scanf("%ZX", N) > 0) {
-
-    gmp_scanf("%ZX", d);
-    gmp_scanf("%ZX", p);
-    gmp_scanf("%ZX", q);
-    gmp_scanf("%ZX", d_p);
-    gmp_scanf("%ZX", d_q);
-    gmp_scanf("%ZX", i_p);
-    gmp_scanf("%ZX", i_q);
-    gmp_scanf("%ZX", c);
+  while (gmp_scanf("%ZX%ZX%ZX%ZX%ZX%ZX%ZX%ZX%ZX", N, d, p, q, d_p, d_q, i_p, i_q, c) == 9) {
 
     // m_p = c^d (mod p)
     exp_mod_crt(m_p, c, d_p, p);
@@ -327,12 +315,7 @@ void stage3() {
 #endif
 
   // Repeat until we reach end of stream
-  while (gmp_scanf("%ZX", p) > 0) {
-
-    gmp_scanf("%ZX", q);
-    gmp_scanf("%ZX", g);
-    gmp_scanf("%ZX", h);
-    gmp_scanf("%ZX", m);
+  while (gmp_scanf("%ZX%ZX%ZX%ZX%ZX", p, q, g, h, m) == 5) {
 
 #ifndef DEBUG
     // Get random value for w
@@ -353,8 +336,7 @@ void stage3() {
     mont_red(c_2, p, omega);
 
     // Print to stdout
-    gmp_printf("%ZX\n", c_1);
-    gmp_printf("%ZX\n", c_2);
+    gmp_printf("%ZX\n%ZX\n", c_1, c_2);
 
   }
 
@@ -395,13 +377,7 @@ void stage4() {
   mpz_init(rho2);
 
   // Repeat until we reach end of stream
-  while (gmp_scanf("%ZX", p) > 0) {
-
-    gmp_scanf("%ZX", q);
-    gmp_scanf("%ZX", g);
-    gmp_scanf("%ZX", x);
-    gmp_scanf("%ZX", c_1);
-    gmp_scanf("%ZX", c_2);
+  while (gmp_scanf("%ZX%ZX%ZX%ZX%ZX%ZX", p, q, g, x, c_1, c_2) > 0) {
 
     // m = c_1^(q-x) * c_2 (mod p)
     mont_init(rho2, &omega, p);

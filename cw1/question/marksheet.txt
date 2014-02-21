@@ -72,7 +72,8 @@ https://en.wikipedia.org/wiki/Exponentiation_by_squaring#2k-ary_method
 
 I modified the Makefile, but only to add another build target for debugging.
 This target was used for stage 3 to switch between using 1 as the ephemeral
-key and using GMP's random number generator otherwise.
+key and using GMP's random number generator otherwise. No changes were made to
+target all.
 
 -------------------------------------------------------------------------------
 

@@ -15,21 +15,21 @@ inline int compare(mpz_t x, mpz_t y) {
 }
 
 // Computer rho^3 for Chinese Remainder Theorem
-void mont_init_cube(mpz_t rho2, mpz_t rho3, mpz_t N) {
+void mont_init_cube(mpz_t rho_squared, mpz_t rho_cubed, mpz_t N) {
   uint64_t i, result;
-  mpz_set(rho3, rho2);
+  mpz_set(rho_cubed, rho_squared);
   for (i = 1; i <= N->_mp_size << 6; i++) {
-    result = mpn_lshift(rho3->_mp_d, rho3->_mp_d, rho3->_mp_size, 1);
+    result = mpn_lshift(rho_cubed->_mp_d, rho_cubed->_mp_d, rho_cubed->_mp_size, 1);
     if (result) {
-      rho3->_mp_d[rho3->_mp_size] = result;
-      rho3->_mp_size++;
+      rho_cubed->_mp_d[rho_cubed->_mp_size] = result;
+      rho_cubed->_mp_size++;
     }
-    if (compare(rho3, N) > -1) mpz_sub(rho3, rho3, N);
+    if (compare(rho_cubed, N) > -1) mpz_sub(rho_cubed, rho_cubed, N);
   }
 }
 
 // Compute variables rho^2 and omega for Montgomery methods
-void mont_init(mpz_t rho2, uint64_t *omega, mpz_t N) {
+void mont_init(mpz_t rho_squared, uint64_t *omega, mpz_t N) {
   uint64_t i, tmp, result;
   // Compute omega = -N^-1 (mod b)
   tmp = 1;
@@ -39,15 +39,15 @@ void mont_init(mpz_t rho2, uint64_t *omega, mpz_t N) {
   }
   *omega = -tmp;
   // Compute rho^2 (mod N)
-  mpz_set_ui(rho2, 1);
-  _mpz_realloc(rho2, (N->_mp_size << 1) + 1);
+  mpz_set_ui(rho_squared, 1);
+  _mpz_realloc(rho_squared, (N->_mp_size << 1) + 1);
   for (i = 1; i <= N->_mp_size << 7; i++) {
-    result = mpn_lshift(rho2->_mp_d, rho2->_mp_d, rho2->_mp_size, 1);
+    result = mpn_lshift(rho_squared->_mp_d, rho_squared->_mp_d, rho_squared->_mp_size, 1);
     if (result) {
-      rho2->_mp_d[rho2->_mp_size] = result;
-      rho2->_mp_size++;
+      rho_squared->_mp_d[rho_squared->_mp_size] = result;
+      rho_squared->_mp_size++;
     }
-    if (compare(rho2, N) > -1) mpz_sub(rho2, rho2, N);
+    if (compare(rho_squared, N) > -1) mpz_sub(rho_squared, rho_squared, N);
   }
 }
 
@@ -93,7 +93,7 @@ void mont_red(mpz_t x, mpz_t N, uint64_t omega) {
 }
 
 // Perform modular exponentiation via Sliding Window with Montgomery Multiplication
-void exp_mod_mont(mpz_t r, mpz_t x, mpz_t y, mpz_t N, mpz_t rho2, uint64_t omega) {
+void exp_mod_mont(mpz_t r, mpz_t x, mpz_t y, mpz_t N, mpz_t rho_squared, uint64_t omega) {
   mpz_t tmp;
   int64_t i, j, l, i_digit, i_bit, l_digit, l_bit;
   uint64_t u;
@@ -110,7 +110,7 @@ void exp_mod_mont(mpz_t r, mpz_t x, mpz_t y, mpz_t N, mpz_t rho2, uint64_t omega
   }
 
   mpz_set_ui(tmp, 1);
-  mont_mul(tmp, tmp, rho2, N, omega);
+  mont_mul(tmp, tmp, rho_squared, N, omega);
   // Set i to the size of y for 64-bit processors.
   i = y->_mp_size << 6;
 
@@ -152,24 +152,24 @@ void exp_mod_mont(mpz_t r, mpz_t x, mpz_t y, mpz_t N, mpz_t rho2, uint64_t omega
 // Used in stage2 as c might be greater than or equal to
 // p or q
 void exp_mod_crt(mpz_t r, mpz_t x, mpz_t y, mpz_t N) {
-  mpz_t rho2, rho3, x_tmp;
+  mpz_t rho_squared, rho_cubed, x_tmp;
   uint64_t omega;
 
   mpz_init_set(x_tmp, x);
 
-  mpz_init(rho2);
-  mpz_init(rho3);
+  mpz_init(rho_squared);
+  mpz_init(rho_cubed);
 
-  mont_init(rho2, &omega, N);
-  mont_init_cube(rho2, rho3, N);
-  mont_mul(x_tmp, x_tmp, rho3, N, omega);
+  mont_init(rho_squared, &omega, N);
+  mont_init_cube(rho_squared, rho_cubed, N);
+  mont_mul(x_tmp, x_tmp, rho_cubed, N, omega);
   mont_red(x_tmp, N, omega);
 
-  exp_mod_mont(r, x_tmp, y, N, rho2, omega);
+  exp_mod_mont(r, x_tmp, y, N, rho_squared, omega);
   mont_red(r, N, omega);
 
-  mpz_clear(rho2);
-  mpz_clear(rho3);
+  mpz_clear(rho_squared);
+  mpz_clear(rho_cubed);
   mpz_clear(x_tmp);
 }
 
@@ -183,7 +183,7 @@ Perform stage 1:
 
 void stage1() {
 
-  mpz_t N, e, m, c, rho2;
+  mpz_t N, e, m, c, rho_squared;
   uint64_t omega;
 
   // Initialise integers
@@ -191,15 +191,15 @@ void stage1() {
   mpz_init(e);
   mpz_init(m);
   mpz_init(c);
-  mpz_init(rho2);
+  mpz_init(rho_squared);
 
   // Repeat until we reach end of stream
   while(gmp_scanf("%ZX%ZX%ZX", N, e, m) == 3) {
 
     // c = m^e (mod N)
-    mont_init(rho2, &omega, N);
-    mont_mul(m, m, rho2, N, omega);
-    exp_mod_mont(c, m, e, N, rho2, omega);
+    mont_init(rho_squared, &omega, N);
+    mont_mul(m, m, rho_squared, N, omega);
+    exp_mod_mont(c, m, e, N, rho_squared, omega);
     mont_red(c, N, omega);
 
     // Print to stdout
@@ -211,7 +211,7 @@ void stage1() {
   mpz_clear(e);
   mpz_clear(m);
   mpz_clear(c);
-  mpz_clear(rho2);
+  mpz_clear(rho_squared);
 
 }
 
@@ -289,7 +289,7 @@ Perform stage 3:
 
 void stage3() {
 
-  mpz_t p, q, g, h, m, c_1, c_2, w, rho2;
+  mpz_t p, q, g, h, m, c_1, c_2, w, rho_squared;
   uint64_t omega;
 #ifndef DEBUG
   gmp_randstate_t state;
@@ -303,7 +303,7 @@ void stage3() {
   mpz_init(m);
   mpz_init(c_1);
   mpz_init(c_2);
-  mpz_init(rho2);
+  mpz_init(rho_squared);
 
 #ifndef DEBUG
   mpz_init(w);
@@ -324,14 +324,14 @@ void stage3() {
 
     // c_1 = g^w (mod p)
     // c_2 = m * h^w (mod p)
-    mont_init(rho2, &omega, p);
-    mont_mul(g, g, rho2, p, omega);
-    exp_mod_mont(c_1, g, w, p, rho2, omega);
+    mont_init(rho_squared, &omega, p);
+    mont_mul(g, g, rho_squared, p, omega);
+    exp_mod_mont(c_1, g, w, p, rho_squared, omega);
     mont_red(c_1, p, omega);
 
-    mont_mul(h, h, rho2, p, omega);
-    exp_mod_mont(c_2, h, w, p, rho2, omega);
-    mont_mul(m, m, rho2, p, omega);
+    mont_mul(h, h, rho_squared, p, omega);
+    exp_mod_mont(c_2, h, w, p, rho_squared, omega);
+    mont_mul(m, m, rho_squared, p, omega);
     mont_mul(c_2, c_2, m, p, omega);
     mont_red(c_2, p, omega);
 
@@ -347,7 +347,7 @@ void stage3() {
   mpz_clear(m);
   mpz_clear(c_1);
   mpz_clear(c_2);
-  mpz_clear(rho2);
+  mpz_clear(rho_squared);
   mpz_clear(w);
 
 }
@@ -362,7 +362,7 @@ Perform stage 4:
 
 void stage4() {
 
-  mpz_t p, q, g, x, c_1, c_2, m, tmp, rho2;
+  mpz_t p, q, g, x, c_1, c_2, m, tmp, rho_squared;
   uint64_t omega;
 
   // Initialise integers
@@ -374,18 +374,18 @@ void stage4() {
   mpz_init(c_2);
   mpz_init(m);
   mpz_init(tmp);
-  mpz_init(rho2);
+  mpz_init(rho_squared);
 
   // Repeat until we reach end of stream
   while (gmp_scanf("%ZX%ZX%ZX%ZX%ZX%ZX", p, q, g, x, c_1, c_2) > 0) {
 
     // m = c_1^(q-x) * c_2 (mod p)
-    mont_init(rho2, &omega, p);
+    mont_init(rho_squared, &omega, p);
     mpz_sub(tmp, q, x);
 
-    mont_mul(c_1, c_1, rho2, p, omega);
-    exp_mod_mont(m, c_1, tmp, p, rho2, omega);
-    mont_mul(c_2, c_2, rho2, p, omega);
+    mont_mul(c_1, c_1, rho_squared, p, omega);
+    exp_mod_mont(m, c_1, tmp, p, rho_squared, omega);
+    mont_mul(c_2, c_2, rho_squared, p, omega);
     mont_mul(m, m, c_2, p, omega);
     mont_red(m, p, omega);
 
@@ -402,7 +402,7 @@ void stage4() {
   mpz_clear(c_2);
   mpz_clear(m);
   mpz_clear(tmp);
-  mpz_clear(rho2);
+  mpz_clear(rho_squared);
 
 }
 

@@ -1,0 +1,54 @@
+Stage 1:
+
+Q.1.1 Consider an example where N = 551, e = 5, d = 101 and c = 243.  Using
+      your own words, briefly explain and illustrate the working principle
+      of this attack (i.e., how and why it works).
+Q.1.2 To prevent the attack, the vendor suggests altering the software: the
+      idea is that no matter what error occurs, the same error code will be
+      produced.  Explain whether (and why, or why not) this change alone is
+      sufficient.
+Q.1.7 Side-channel attacks are often categorised as being either simple or
+      differential: how would categorise this attack, and why?
+
+
+Stage 2:
+
+Q.2.1 The vendor of this attack target is concerned that news of this attack
+      could scare off potential customers; they will make any alteration
+      necessary (in software or hardware) to prevent the attack.  Explain
+      the options they have, and which one you would recommend.
+Q.2.2 Assuming a Montgomery multiplication takes n (simulated) clock cycles
+      on the attack target, estimate the value of n (as accurately as you
+      can) and explain how you did so.
+Q.2.3 Your implementation of this attack will use some form of statistical
+      test.  Explain what test you have used, and how it works.
+
+
+Stage 3:
+
+Q.3.1 Imagine that instead of influencing data (i.e., the state matrix), a
+      fault can influence control-flow (e.g., conditional statements, loop
+      structure) somehow during execution.  Stating any assumptions you
+      make, give an alternative attack strategy based on this ability.
+Q.3.2 The question does not specify how faults are induced.  For the given
+      attack target and context, explain one viable approach.
+Q.3.4 How do the properties of different AES round functions influence the
+      effectiveness of your attack?  More specifically, imagine SubBytes is
+      removed: does this help or hinder your attack?
+
+
+Stage 4:
+
+Q.4.1 As a security consultant, you have been working on a prototype of the
+      attack target; before the product is deployed, the vendor is willing
+      to make any alteration necessary (in software or hardware) to prevent
+      the attack.  Explain the options available, and which one you would
+      recommend.
+Q.4.2 Your implementation of this attack will target some operation during
+      execution of AES.  Identify which operation you target, and explain
+      why.  Outline other operation(s) you could have targeted, and why they
+      might be a better or worse choice.
+Q.4.4 DPA attacks rely on a leakage model; for an Intel 8051, one might
+      consider Hamming weight or Hamming distance models for example.
+      Explain and justify the choice of model you used (e.g., explain
+      why/how the attack target might leak information in this way).

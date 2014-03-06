@@ -9,6 +9,21 @@ def ceildiv(x, y):
         q += 1
     return q
 
+def interact(f):
+    c_prime = (c * pow(f, e, N)) % N
+    c_primeh = "%X" % c_prime
+    while len(c_primeh) < k * 2:
+        c_primeh = "0" + c_primeh
+
+    target_in.write("%s\n" % c_primeh)
+    target_in.flush()
+
+    l = int(target_out.readline().strip(), 16)
+    if (l > 2):
+        print l
+        sys.exit(0)
+    return l
+
 public = open(sys.argv[2], 'r')
 N_hex = public.readline()
 e_hex = public.readline()
@@ -34,61 +49,30 @@ l = 0
 
 while l != 1:
     f_1 *= 2
-    c_prime = (c * pow(f_1, e, N)) % N
-    c_primeh = "%X" % c_prime
-    if len(c_primeh) % 2:
-        c_primeh = "0" + c_primeh
-
-    target_in.write("%s\n" % c_primeh)
-    target_in.flush()
-
-    l = int(target_out.readline().strip(), 16)
-    if (l > 2):
-        print l
-        sys.exit(0)
+    l = interact(f_1)
 
 f_2 = int((N + B) / B) * (f_1 / 2)
 
 while l == 1:
-    c_prime = (c * pow(f_2, e, N)) % N
-    c_primeh = "%X" % c_prime
-    if len(c_primeh) % 2:
-        c_primeh = "0" + c_primeh
-
-    target_in.write("%s\n" % c_primeh)
-    target_in.flush()
-
-    l = int(target_out.readline().strip(), 16)
+    l = interact(f_2)
     if l == 1:
         f_2 = f_2 + f_1 / 2
-    if l > 2:
-        print l
-        sys.exit(0)
 
-m_min = int(ceildiv(N, f_2))
-m_max = int((N + B) / f_2)
+m_min = ceildiv(N, f_2)
+m_max = (N + B) / f_2
 
 while m_min != m_max:
-    f_tmp = int((2 * B) / (m_max - m_min))
-    i = int((f_tmp * m_min) / N) 
-    f_3 = int(ceildiv(i * N, m_min))
-    c_prime = (c * pow(f_3, e, N)) % N
-    c_primeh = "%X" % c_prime
-    while len(c_primeh) < k * 2:
-        c_primeh = "0" + c_primeh
-
-    target_in.write("%s\n" % c_primeh)
-    target_in.flush()
-
-    l = int(target_out.readline().strip(), 16)
+    f_tmp = 2 * B / (m_max - m_min)
+    i = (f_tmp * m_min) / N
+    f_3 = ceildiv(i * N, m_min)
+    l = interact(f_3)
     if l == 1:
-        m_min = int(ceildiv((i * N + B), f_3))
+        m_min = ceildiv(i * N + B, f_3)
     else:
-        m_max = int((i * N + B) / f_3)
-    if l > 2:
-        print l
-        sys.exit(0)
+        m_max = (i * N + B) / f_3
 
 m = m_min
 print m
 print "%X" % m
+print c
+print pow(m, e, N)

@@ -46,10 +46,12 @@ target_in  = target.stdin
 f_1 = 1
 
 l = 0
+counter = 0
 
 while l != 1:
     f_1 *= 2
     l = interact(f_1)
+    counter += 1
 
 f_2 = int((N + B) / B) * (f_1 / 2)
 
@@ -57,6 +59,7 @@ while l == 1:
     l = interact(f_2)
     if l == 1:
         f_2 = f_2 + f_1 / 2
+    counter += 1
 
 m_min = ceildiv(N, f_2)
 m_max = (N + B) / f_2
@@ -70,9 +73,11 @@ while m_min != m_max:
         m_min = ceildiv(i * N + B, f_3)
     else:
         m_max = (i * N + B) / f_3
+    counter += 1
 
 m = m_min
 print m
 print "%X" % m
 print c
 print pow(m, e, N)
+print counter

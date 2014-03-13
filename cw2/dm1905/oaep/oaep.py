@@ -144,13 +144,13 @@ m = re.search('(?<=01).*', db_hex[40:]).group(0)
 
 # Get UID from m
 uid = ""
-for i in range(0, 4, 2):
+for i in range(0, 8, 2):
     uid = m[i:i+2] + uid
 
 print "--------------------\nOverall Attack Results\n"
 
 print "Padded message db = %s\n" % db_hex
 
-print "Fully Decrypted Message m = %s\n" % m
+print "Fully decrypted message m = %s\n" % m
 
 print "User ID uid = %d" % int(uid, 16)

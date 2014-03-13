@@ -74,7 +74,7 @@ while l != 1:
     l = interact(f_1)
     counter += 1
 
-print "--------------------\nAttack Stage 1 Results\n"
+print "Attack Stage 1 Results\n"
 
 print "Multiplier f_1 = %d\n" % f_1
 

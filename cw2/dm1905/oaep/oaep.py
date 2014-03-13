@@ -1,11 +1,18 @@
 import Crypto.Util.number as number
+import hashlib
 import sys
 import subprocess
 import math
+import re
 
+# Helper function for ceiling division
+# Works by upside-down floor division
 def ceildiv(x, y):
     return -(-x//y)
 
+# Helper function for interacting with the system
+# Converts an integer into a hexadecimal string, does any necessary padding
+# and returns the result as a string.
 def interact(f):
     c_prime = (c * pow(f, e, N)) % N
     c_primeh = "%X" % c_prime
@@ -21,6 +28,21 @@ def interact(f):
         sys.exit(0)
     return l
 
+# Mask-Generation Function using SHA-1 as the message
+# mask_len is based on number of hex digits, not octets for simplicity
+def mgf(mgf_seed, seed_len, mask_len):
+    T_hex = ""
+    seed_hex = "%X" % mgf_seed
+    while len(seed_hex) < seed_len:
+        seed_hex = "0" + seed_hex
+    for counter in range(ceildiv(mask_len, h_len)):
+        counter_hex = "%X" % counter
+        while len(counter_hex) < 8:
+            counter_hex = "0" + counter_hex
+        T_hex += hashlib.sha1((seed_hex + counter_hex).decode("hex")).hexdigest()
+    return int(T_hex[:mask_len], 16)
+
+# Get N, e and c
 public = open(sys.argv[2], 'r')
 N_hex = public.readline()
 e_hex = public.readline()
@@ -31,6 +53,7 @@ N = int(N_hex, 16)
 e = int(e_hex, 16)
 c = int(c_hex, 16)
 
+# Compute limits k and B
 k = len(N_hex) // 2
 B = pow(2, 8 * (k - 1))
 
@@ -41,8 +64,8 @@ target = subprocess.Popen(args   = sys.argv[ 1 ],
 target_out = target.stdout
 target_in  = target.stdin
 
+# Stage 1
 f_1 = 1
-
 l = 0
 counter = 0
 
@@ -51,6 +74,14 @@ while l != 1:
     l = interact(f_1)
     counter += 1
 
+print "--------------------\nAttack Stage 1 Results\n"
+
+print "Multiplier f_1 = %d\n" % f_1
+
+print "Current interactions: %d" % counter
+
+# Stage 2
+
 f_2 = int((N + B) // B) * (f_1 // 2)
 
 while l == 1:
@@ -58,6 +89,14 @@ while l == 1:
     if l == 1:
         f_2 = f_2 + f_1 // 2
     counter += 1
+
+print "--------------------\nAttack Stage 2 Results\n"
+
+print "Multiplier f_2 = %d\n" % f_2
+
+print "Current interactions: %d" % counter
+
+# Stage 3
 
 m_min = ceildiv(N, f_2)
 m_max = (N + B) // f_2
@@ -74,8 +113,44 @@ while m_min != m_max:
     counter += 1
 
 m = m_min
-print m
-print "%X" % m
-print c
-print pow(m, e, N)
-print counter
+m_hex = "%X" % m
+
+while(len(m_hex) < (k - 1) * 2):
+    m_hex = "0" + m_hex
+
+print "--------------------\nAttack Stage 3 Results\n"
+
+print "Multiplier f_3 = %d\n" % f_3
+
+print "RSA-Decrypted message m = %s\n" % m_hex
+
+print "Total interactions: %d" % counter
+
+# OAEP decryption
+
+h_len = hashlib.sha1().digest_size * 2
+masked_seed = int(m_hex[:h_len], 16)
+masked_db = int(m_hex[h_len:], 16)
+
+seed_mask = mgf(masked_db, len(m_hex) - h_len, h_len)
+seed = masked_seed ^ seed_mask
+
+db_mask = mgf(seed, h_len, len(m_hex) - h_len)
+db = masked_db ^ db_mask
+
+db_hex = "%X" % db
+
+m = re.search('(?<=01).*', db_hex[40:]).group(0)
+
+# Get UID from m
+uid = ""
+for i in range(0, 4, 2):
+    uid = m[i:i+2] + uid
+
+print "--------------------\nOverall Attack Results\n"
+
+print "Padded message db = %s\n" % db_hex
+
+print "Fully Decrypted Message m = %s\n" % m
+
+print "User ID uid = %d" % int(uid, 16)

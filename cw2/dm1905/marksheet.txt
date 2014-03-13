@@ -16,7 +16,7 @@
 So that we can calibrate and improve the assignment in the future, give us
 a rough idea how long (in hours) you spent on it *in total*:
 
-effort : [...] hours
+effort : 10 hours
 
 -------------------------------------------------------------------------------
 
@@ -41,12 +41,12 @@ For example, other elements outside this list *often* warrant an increase
 or decrease in marks; examples include hard to quantify features such as
 the style or efficiency of a solution.
 
-[?] Stage 1 : an attack based on error messages
+[X] Stage 1 : an attack based on error messages
 
               - Successfully reversed RSADP    primitive             ( 50%)
               - Successfully reversed EME-OAEP primitive             ( 50%)
 
-                Attack result : [...]
+                Attack result : [172600005846B4186A65CFB1D8BB7B7C80D2C39C88399D06C9D901BBA0389A62AEEA3A75C40EF357C5FC]
 
 [?] Stage 2 : an attack based on execution time
 
@@ -85,6 +85,10 @@ Any other documentation, notes or comments that you think are important or
 might be easy to overlook (e.g., a subtle issue or technique in associated
 source code) should go here:
 
-[...]
+As per section 3.2 of Manger's paper, the attack for stage 1 is not guaranteed
+to work if N < 2B. I looked briefly at D. Bleichenbacher's 1998 paper
+describing an attack which uses multiple ranges, but concluded that the
+complexity of creating those ranges as described in the paper and the increase
+in the number of interactions with the system required was not worthwhile.
 
 -------------------------------------------------------------------------------

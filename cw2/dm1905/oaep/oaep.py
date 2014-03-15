@@ -2,7 +2,6 @@ import Crypto.Util.number as number
 import hashlib
 import sys
 import subprocess
-import math
 import re
 
 # Helper function for ceiling division

@@ -121,7 +121,7 @@ print "--------------------\nAttack Stage 3 Results\n"
 
 print "Multiplier f_3 = %d\n" % f_3
 
-print "RSA-Decrypted message m = %s\n" % m_hex
+print "RSA-Decrypted message m = %s\n" % ("00" + m_hex)
 
 print "Total interactions: %d" % counter
 

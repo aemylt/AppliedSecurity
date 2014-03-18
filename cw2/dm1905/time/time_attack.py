@@ -73,6 +73,26 @@ def test_red(c, d, N, rho_2, l_N, omega):
     _, red = mont_mul(t, t, N, l_N, omega)
     return red
 
+def test_message(c, d, N, rho_2, l_N, omega):
+    bit0_red = []
+    bit0_nored = []
+    bit1_red = []
+    bit1_nored = []
+    if test_red(c, d << 1, N, rho_2, l_N, omega):
+        time, _ = interact(c)
+        bit0_red.append(time)
+    else:
+        time, _ = interact(c)
+        bit0_nored.append(time)
+
+    if test_red(c, (d << 1) + 1, N, rho_2, l_N, omega):
+        time, _ = interact(c)
+        bit1_red.append(time)
+    else:
+        time, _ = interact(c)
+        bit1_nored.append(time)
+    return bit0_red, bit0_nored, bit1_red, bit1_nored
+
 # Get N and e
 public = open(sys.argv[2], 'r')
 N_hex = public.readline()
@@ -92,12 +112,5 @@ target_in  = target.stdin
 l_N, rho_2, omega = mont_init(N)
 
 c = random.randint(0, N)
-test = mont_exp(c, e, N, rho_2, l_N, omega)
 
-print test
-print pow(c, e, N)
-
-print test_red(c, e >> 50, N, rho_2, l_N, omega)
-
-c = random.randint(0, N)
-l, m = interact(c)
+print test_message(c, 0, N, rho_2, l_N, omega)

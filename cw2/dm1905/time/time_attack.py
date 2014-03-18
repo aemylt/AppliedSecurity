@@ -56,36 +56,38 @@ def mont_red(t, N, l_N, omega):
         return t
 
 def mont_exp_loop(x, y, N, rho_2, l_N, omega):
-    x_p, _ = mont_mul(x, rho_2, N, l_N, omega)
     t = mont_red(rho_2, N, l_N, omega)
 
     for i in range(len("%X" % y) * 4 - 1, -1, -1):
         t, _ = mont_mul(t, t, N, l_N, omega)
         if (y >> i) & 1:
-            t, _ = mont_mul(t, x_p, N, l_N, omega)
+            t, _ = mont_mul(t, x, N, l_N, omega)
     return t
 
 def mont_exp(x, y, N, rho_2, l_N, omega):
-    return mont_red(mont_exp_loop(x, y, N, rho_2, l_N, omega), N, l_N, omega)
-
-def test_red(c, d, N, rho_2, l_N, omega):
-    t = mont_exp_loop(c, d, N, rho_2, l_N, omega)
-    _, red = mont_mul(t, t, N, l_N, omega)
-    return red
+    x_p, _ = mont_mul(x, rho_2, N, l_N, omega)
+    return mont_red(mont_exp_loop(x_p, y, N, rho_2, l_N, omega), N, l_N, omega)
 
 def test_message(c, d, N, rho_2, l_N, omega):
     bit0_red = []
     bit0_nored = []
     bit1_red = []
     bit1_nored = []
-    if test_red(c, d << 1, N, rho_2, l_N, omega):
+    c_p, _ = mont_mul(c, rho_2, N, l_N, omega)
+    t = mont_exp_loop(c_p, d, N, rho_2, l_N, omega)
+    t, _ = mont_mul(t, t, N, l_N, omega)
+    t_0 = t
+    t_1, _ = mont_mul(t, c_p, N, l_N, omega)
+    _, red_0 = mont_mul(t_0, t_0, N, l_N, omega)
+    _, red_1 = mont_mul(t_1, t_1, N, l_N, omega)
+    if red_0:
         time, _ = interact(c)
         bit0_red.append(time)
     else:
         time, _ = interact(c)
         bit0_nored.append(time)
 
-    if test_red(c, (d << 1) + 1, N, rho_2, l_N, omega):
+    if red_1:
         time, _ = interact(c)
         bit1_red.append(time)
     else:
@@ -113,4 +115,4 @@ l_N, rho_2, omega = mont_init(N)
 
 c = random.randint(0, N)
 
-print test_message(c, 0, N, rho_2, l_N, omega)
+print test_message(c, 1, N, rho_2, l_N, omega)

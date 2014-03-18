@@ -3,8 +3,8 @@ import sys
 import subprocess
 import random
 
-b = 18446744073709551616
-l_b = 64
+w = 64
+b = 1 << w
 
 # Helper function for ceiling division
 # Works by upside-down floor division
@@ -25,12 +25,12 @@ def interact(c):
 def mont_init(N):
     l_N = ceildiv(len("%X" % N), 16)
     rho_2 = 1
-    for i in range(2 * l_N * l_b):
+    for i in range(2 * l_N * w):
         rho_2 += rho_2
         if rho_2 >= N:
             rho_2 -= N
     omega = 1
-    for i in range(1, l_b):
+    for i in range(1, w):
         omega = (omega * omega * N) & (b - 1)
     omega = b - omega
     return l_N, rho_2, omega
@@ -38,8 +38,8 @@ def mont_init(N):
 def mont_mul(x, y, N, l_N, omega):
     r = 0
     for i in range(l_N):
-        u = (((r & (b - 1)) + ((y >> (i * l_b)) & (b - 1)) * (x & (b - 1))) * omega) & (b - 1)
-        r = (r + ((y >> (i * l_b)) & (b - 1)) * x + u * N) >> l_b
+        u = (((r & (b - 1)) + ((y >> (i * w)) & (b - 1)) * (x & (b - 1))) * omega) & (b - 1)
+        r = (r + ((y >> (i * w)) & (b - 1)) * x + u * N) >> w
     if r > N:
         return r - N, True
     else:

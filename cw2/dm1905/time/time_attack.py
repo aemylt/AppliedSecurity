@@ -48,14 +48,14 @@ def mont_mul(x, y, N, l_N, omega):
 def mont_red(t, N, l_N, omega):
     for i in range(l_N):
         u = (((t >> (i * w)) & (b - 1)) * omega) & (b - 1)
-        t += u * N * (1 << (i * w))
+        t += (u * N) << (i * w)
     t >>= (w * l_N)
     if t > N:
         return t - N
     else:
         return t
 
-def mont_exp(x, y, N, rho_2, l_N, omega):
+def mont_exp_loop(x, y, N, rho_2, l_N, omega):
     x_p, _ = mont_mul(x, rho_2, N, l_N, omega)
     t = mont_red(rho_2, N, l_N, omega)
 
@@ -63,8 +63,15 @@ def mont_exp(x, y, N, rho_2, l_N, omega):
         t, _ = mont_mul(t, t, N, l_N, omega)
         if (y >> i) & 1:
             t, _ = mont_mul(t, x_p, N, l_N, omega)
-    r = mont_red(t, N, l_N, omega)
-    return r
+    return t
+
+def mont_exp(x, y, N, rho_2, l_N, omega):
+    return mont_red(mont_exp_loop(x, y, N, rho_2, l_N, omega), N, l_N, omega)
+
+def test_red(c, d, N, rho_2, l_N, omega):
+    t = mont_exp_loop(c, d, N, rho_2, l_N, omega)
+    _, red = mont_mul(t, t, N, l_N, omega)
+    return red
 
 # Get N and e
 public = open(sys.argv[2], 'r')
@@ -89,6 +96,8 @@ test = mont_exp(c, e, N, rho_2, l_N, omega)
 
 print test
 print pow(c, e, N)
+
+print test_red(c, e >> 50, N, rho_2, l_N, omega)
 
 c = random.randint(0, N)
 l, m = interact(c)

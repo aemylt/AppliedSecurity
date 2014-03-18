@@ -45,15 +45,25 @@ def mont_mul(x, y, N, l_N, omega):
     else:
         return r, False
 
+def mont_red(t, N, l_N, omega):
+    for i in range(l_N):
+        u = (((t >> (i * w)) & (b - 1)) * omega) & (b - 1)
+        t += u * N * (1 << (i * w))
+    t >>= (w * l_N)
+    if t > N:
+        return t - N
+    else:
+        return t
+
 def mont_exp(x, y, N, rho_2, l_N, omega):
     x_p, _ = mont_mul(x, rho_2, N, l_N, omega)
-    t, _ = mont_mul(1, rho_2, N, l_N, omega)
+    t = mont_red(rho_2, N, l_N, omega)
 
     for i in range(len("%X" % y) * 4 - 1, -1, -1):
         t, _ = mont_mul(t, t, N, l_N, omega)
         if (y >> i) & 1:
             t, _ = mont_mul(t, x_p, N, l_N, omega)
-    r, _ = mont_mul(t, 1, N, l_N, omega)
+    r = mont_red(t, N, l_N, omega)
     return r
 
 # Get N and e

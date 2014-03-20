@@ -60,17 +60,18 @@ def mont_red(t, N, l_N, omega):
         return t
 
 # Montgomery exponentiation within a L2R binary loop
-def mont_exp_loop(x, y, N, rho_2, l_N, omega):
+def mont_exp(x, y, N, rho_2, l_N, omega):
+    x_p, _ = mont_mul(x, rho_2, N, l_N, omega)
     t = mont_red(rho_2, N, l_N, omega)
 
     for i in range(len("%X" % y) * 4 - 1, -1, -1):
         t, _ = mont_mul(t, t, N, l_N, omega)
         if (y >> i) & 1:
-            t, _ = mont_mul(t, x, N, l_N, omega)
+            t, _ = mont_mul(t, x_p, N, l_N, omega)
     return t
 
 # Generate test ciphertexts
-def generate_cs(N, rho_2, l_N, omega, num_interactions):
+def generate_cs(N, d, rho_2, l_N, omega, num_interactions):
     c_time = []
     c_message = []
     c_p = []
@@ -81,7 +82,7 @@ def generate_cs(N, rho_2, l_N, omega, num_interactions):
         c = random.randint(2, N)
         c_mont, _ = mont_mul(c, rho_2, N, l_N, omega)
         c_p.append(c_mont)
-        c_cur.append(c_p[-1])
+        c_cur.append(mont_exp(c, d, N, rho_2, l_N, omega))
         time, test_message = interact(c)
         num_interactions += 1
         c_time.append(time)
@@ -114,7 +115,7 @@ num_interactions = 0
 # Repeat until we manage to successfully decrypt a message
 while(pow(test_c, d, N) != test_message):
 
-    c_time, c_p, c_cur, num_interactions, test_c, test_message = generate_cs(N, rho_2, l_N, omega, num_interactions)
+    c_time, c_p, c_cur, num_interactions, test_c, test_message = generate_cs(N, d, rho_2, l_N, omega, num_interactions)
 
     d = 1
     n = 1
@@ -161,10 +162,17 @@ while(pow(test_c, d, N) != test_message):
         if diff_0 > diff_1:
             d <<= 1
             c_cur = c_0
-        else:
+            n += 1
+        elif diff_1 > diff_0:
             d = (d << 1) + 1
             c_cur = c_1
-        n += 1
+            n += 1
+        else:
+            print "Can't distinguish a bit"
+            print "Bit 0: %d" % diff_0
+            print "Bit 1: %d" % diff_1
+            print "Regenerating Messages"
+            c_time, c_p, c_cur, num_interactions, test_c, test_message = generate_cs(N, d, rho_2, l_N, omega, num_interactions)
         # Test if we have recovered the key by decrypting a ciphertext
         # This is done by bruteforcing the final bit, as we can't exploit
         # the square in the next round due to there not being another round

@@ -151,6 +151,6 @@ while n < 64:
         d = (d << 1) + 1
         break
 
-print d
+print "%X" % d
 print pow(test_c, d, N)
 print interaction

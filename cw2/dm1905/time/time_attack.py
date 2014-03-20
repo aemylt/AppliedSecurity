@@ -68,33 +68,6 @@ def mont_exp(x, y, N, rho_2, l_N, omega):
     x_p, _ = mont_mul(x, rho_2, N, l_N, omega)
     return mont_red(mont_exp_loop(x_p, y, N, rho_2, l_N, omega), N, l_N, omega)
 
-def test_message(c, d, N, rho_2, l_N, omega):
-    bit0_red = []
-    bit0_nored = []
-    bit1_red = []
-    bit1_nored = []
-    c_p, _ = mont_mul(c, rho_2, N, l_N, omega)
-    t = mont_exp_loop(c_p, d, N, rho_2, l_N, omega)
-    t, _ = mont_mul(t, t, N, l_N, omega)
-    t_0 = t
-    t_1, _ = mont_mul(t, c_p, N, l_N, omega)
-    _, red_0 = mont_mul(t_0, t_0, N, l_N, omega)
-    _, red_1 = mont_mul(t_1, t_1, N, l_N, omega)
-    if red_0:
-        time, _ = interact(c)
-        bit0_red.append(time)
-    else:
-        time, _ = interact(c)
-        bit0_nored.append(time)
-
-    if red_1:
-        time, _ = interact(c)
-        bit1_red.append(time)
-    else:
-        time, _ = interact(c)
-        bit1_nored.append(time)
-    return bit0_red, bit0_nored, bit1_red, bit1_nored
-
 # Get N and e
 public = open(sys.argv[2], 'r')
 N_hex = public.readline()
@@ -113,6 +86,71 @@ target_in  = target.stdin
 
 l_N, rho_2, omega = mont_init(N)
 
-c = random.randint(0, N)
+cs = []
+c_time = []
+c_message = []
+c_p = []
+c_cur = []
 
-print test_message(c, 1, N, rho_2, l_N, omega)
+for i in range(10000):
+    cs.append(random.randint(2, N))
+    c_mont, _ = mont_mul(cs[-1], rho_2, N, l_N, omega)
+    c_p.append(c_mont)
+    c_cur.append(c_p[-1])
+    time, message = interact(cs[-1])
+    c_time.append(time)
+    c_message.append(message)
+
+d = 1
+n = 1
+while n < 64:
+    c_0 = []
+    c_1 = []
+    bit0_red = []
+    bit0_nored = []
+    bit1_red = []
+    bit1_nored = []
+    for i, c in enumerate(cs):
+        ci_0 = c_cur[i]
+        ci_0, _ = mont_mul(ci_0, ci_0, N, l_N, omega)
+        c_0.append(ci_0)
+        ci_0, red0 = mont_mul(ci_0, ci_0, N, l_N, omega)
+        if red0:
+            bit0_red.append(c_time[i])
+        else:
+            bit0_nored.append(c_time[i])
+        ci_1 = c_cur[i]
+        ci_1, _ = mont_mul(ci_1, ci_1, N, l_N, omega)
+        ci_1, _ = mont_mul(ci_1, c_p[i], N, l_N, omega)
+        c_1.append(ci_1)
+        ci_1, red1 = mont_mul(ci_1, ci_1, N, l_N, omega)
+        if red1:
+            bit1_red.append(c_time[i])
+        else:
+            bit1_nored.append(c_time[i])
+
+    mean_bit0_red = sum(bit0_red) // len(bit0_red)
+    mean_bit0_nored = sum(bit0_nored) // len(bit0_nored)
+    mean_bit1_red = sum(bit1_red) // len(bit1_red)
+    mean_bit1_nored = sum(bit1_nored) // len(bit1_nored)
+
+    if mean_bit0_red - mean_bit0_nored > mean_bit1_red - mean_bit1_nored:
+        d <<= 1
+        c_cur = c_0
+    else:
+        d = (d << 1) + 1
+        c_cur = c_1
+    n += 1
+    print d
+    test_c = random.randint(2, N)
+    _, interaction = interact(test_c)
+    if pow(test_c, d << 1, N) == interaction:
+        d <<= 1
+        break
+    elif pow(test_c, (d << 1) + 1, N) == interaction:
+        d = (d << 1) + 1
+        break
+
+print d
+print pow(test_c, d, N)
+print interaction

@@ -16,7 +16,7 @@
 So that we can calibrate and improve the assignment in the future, give us
 a rough idea how long (in hours) you spent on it *in total*:
 
-effort : 18 hours
+effort : 22 hours
 
 -------------------------------------------------------------------------------
 
@@ -48,7 +48,7 @@ the style or efficiency of a solution.
 
                 Attack result : [172600005846B4186A65CFB1D8BB7B7C80D2C39C88399D06C9D901BBA0389A62AEEA3A75C40EF357C5FC]
 
-[?] Stage 2 : an attack based on execution time
+[X] Stage 2 : an attack based on execution time
 
               - Efficiency  of attack strategy                       ( 20%)
               - Robustness  of attack strategy                       ( 20%)

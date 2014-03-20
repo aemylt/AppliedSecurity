@@ -1,4 +1,3 @@
-import Crypto.Util.number as number
 import hashlib
 import sys
 import subprocess
@@ -14,16 +13,14 @@ def ceildiv(x, y):
 # and returns the result as a string.
 def interact(f):
     c_prime = (c * pow(f, e, N)) % N
-    c_primeh = "%X" % c_prime
-    while len(c_primeh) < k * 2:
-        c_primeh = "0" + c_primeh
+    c_primeh = ("%X" % c_prime).zfill(k * 2)
 
     target_in.write("%s\n" % c_primeh)
     target_in.flush()
 
     l = int(target_out.readline().strip(), 16)
     if (l > 2):
-        print l
+        print "Error occured during interaction: %d" % l
         sys.exit(0)
     return l
 
@@ -31,13 +28,9 @@ def interact(f):
 # mask_len is based on number of hex digits, not octets for simplicity
 def mgf(mgf_seed, seed_len, mask_len):
     T_hex = ""
-    seed_hex = "%X" % mgf_seed
-    while len(seed_hex) < seed_len:
-        seed_hex = "0" + seed_hex
+    seed_hex = ("%X" % mgf_seed).zfill(seed_len)
     for counter in range(ceildiv(mask_len, h_len)):
-        counter_hex = "%X" % counter
-        while len(counter_hex) < 8:
-            counter_hex = "0" + counter_hex
+        counter_hex = ("%X" % counter).zfill(8)
         T_hex += hashlib.sha1((seed_hex + counter_hex).decode("hex")).hexdigest()
     return int(T_hex[:mask_len], 16)
 

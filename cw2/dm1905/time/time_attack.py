@@ -1,8 +1,8 @@
-import Crypto.Util.number as number
 import sys
 import subprocess
 import random
 
+# Defining the word length
 w = 64
 b = 1 << w
 
@@ -22,6 +22,7 @@ def interact(c):
     m = int(target_out.readline().strip(), 16)
     return l, m
 
+# Helper function to initialise Montgomery variables
 def mont_init(N):
     l_N = ceildiv(len("%X" % N), 16)
     rho_2 = 1
@@ -35,6 +36,8 @@ def mont_init(N):
     omega = b - omega
     return l_N, rho_2, omega
 
+# Perform Montgomery Multiplication.
+# Return the computed result and whether a reduction was required or not
 def mont_mul(x, y, N, l_N, omega):
     r = 0
     for i in range(l_N):
@@ -45,6 +48,7 @@ def mont_mul(x, y, N, l_N, omega):
     else:
         return r, False
 
+# Perform Montgomery Reduction
 def mont_red(t, N, l_N, omega):
     for i in range(l_N):
         u = (((t >> (i * w)) & (b - 1)) * omega) & (b - 1)
@@ -55,6 +59,7 @@ def mont_red(t, N, l_N, omega):
     else:
         return t
 
+# Montgomery exponentiation within a L2R binary loop
 def mont_exp_loop(x, y, N, rho_2, l_N, omega):
     t = mont_red(rho_2, N, l_N, omega)
 
@@ -64,9 +69,23 @@ def mont_exp_loop(x, y, N, rho_2, l_N, omega):
             t, _ = mont_mul(t, x, N, l_N, omega)
     return t
 
-def mont_exp(x, y, N, rho_2, l_N, omega):
-    x_p, _ = mont_mul(x, rho_2, N, l_N, omega)
-    return mont_red(mont_exp_loop(x_p, y, N, rho_2, l_N, omega), N, l_N, omega)
+# Generate test ciphertexts
+def generate_cs(N, rho_2, l_N, omega, num_interactions):
+    c_time = []
+    c_message = []
+    c_p = []
+    c_cur = []
+
+    print "Generating messages"
+    for i in range(13000):
+        c = random.randint(2, N)
+        c_mont, _ = mont_mul(c, rho_2, N, l_N, omega)
+        c_p.append(c_mont)
+        c_cur.append(c_p[-1])
+        time, test_message = interact(c)
+        num_interactions += 1
+        c_time.append(time)
+    return c_time, c_p, c_cur, num_interactions, c, test_message
 
 # Get N and e
 public = open(sys.argv[2], 'r')
@@ -77,6 +96,7 @@ public.close()
 N = int(N_hex, 16)
 e = int(e_hex, 16)
 
+# Set up attack target
 target = subprocess.Popen(args   = sys.argv[ 1 ],
                           stdout = subprocess.PIPE, 
                           stdin  = subprocess.PIPE)
@@ -86,71 +106,78 @@ target_in  = target.stdin
 
 l_N, rho_2, omega = mont_init(N)
 
-cs = []
-c_time = []
-c_message = []
-c_p = []
-c_cur = []
-
-for i in range(10000):
-    cs.append(random.randint(2, N))
-    c_mont, _ = mont_mul(cs[-1], rho_2, N, l_N, omega)
-    c_p.append(c_mont)
-    c_cur.append(c_p[-1])
-    time, message = interact(cs[-1])
-    c_time.append(time)
-    c_message.append(message)
-
+test_c = 1
 d = 1
-n = 1
-while n < 64:
-    c_0 = []
-    c_1 = []
-    bit0_red = []
-    bit0_nored = []
-    bit1_red = []
-    bit1_nored = []
-    for i, c in enumerate(cs):
-        ci_0 = c_cur[i]
-        ci_0, _ = mont_mul(ci_0, ci_0, N, l_N, omega)
-        c_0.append(ci_0)
-        ci_0, red0 = mont_mul(ci_0, ci_0, N, l_N, omega)
-        if red0:
-            bit0_red.append(c_time[i])
+test_message = 0
+num_interactions = 0
+
+# Repeat until we manage to successfully decrypt a message
+while(pow(test_c, d, N) != test_message):
+
+    c_time, c_p, c_cur, num_interactions, test_c, test_message = generate_cs(N, rho_2, l_N, omega, num_interactions)
+
+    d = 1
+    n = 1
+    print "Testing key bits"
+    # Test 64 bits
+    while n < 64:
+        print "Guessing bit %d" % n
+        c_0 = []
+        c_1 = []
+        # Fill in the reduction sets
+        bit0_red = []
+        bit0_nored = []
+        bit1_red = []
+        bit1_nored = []
+        for i, c in enumerate(c_p):
+            ci_0 = c_cur[i]
+            ci_0, _ = mont_mul(ci_0, ci_0, N, l_N, omega)
+            c_0.append(ci_0)
+            ci_0, red0 = mont_mul(ci_0, ci_0, N, l_N, omega)
+            if red0:
+                bit0_red.append(c_time[i])
+            else:
+                bit0_nored.append(c_time[i])
+            ci_1 = c_cur[i]
+            ci_1, _ = mont_mul(ci_1, ci_1, N, l_N, omega)
+            ci_1, _ = mont_mul(ci_1, c, N, l_N, omega)
+            c_1.append(ci_1)
+            ci_1, red1 = mont_mul(ci_1, ci_1, N, l_N, omega)
+            if red1:
+                bit1_red.append(c_time[i])
+            else:
+                bit1_nored.append(c_time[i])
+
+        # Calculate the distinguisher
+        mean_bit0_red = sum(bit0_red) // len(bit0_red)
+        mean_bit0_nored = sum(bit0_nored) // len(bit0_nored)
+        mean_bit1_red = sum(bit1_red) // len(bit1_red)
+        mean_bit1_nored = sum(bit1_nored) // len(bit1_nored)
+        diff_0 = mean_bit0_red - mean_bit0_nored
+        diff_1 = mean_bit1_red - mean_bit1_nored
+
+        # Statistically guess a bit
+        # If there is no difference, the default currently is 1
+        if diff_0 > diff_1:
+            d <<= 1
+            c_cur = c_0
         else:
-            bit0_nored.append(c_time[i])
-        ci_1 = c_cur[i]
-        ci_1, _ = mont_mul(ci_1, ci_1, N, l_N, omega)
-        ci_1, _ = mont_mul(ci_1, c_p[i], N, l_N, omega)
-        c_1.append(ci_1)
-        ci_1, red1 = mont_mul(ci_1, ci_1, N, l_N, omega)
-        if red1:
-            bit1_red.append(c_time[i])
-        else:
-            bit1_nored.append(c_time[i])
+            d = (d << 1) + 1
+            c_cur = c_1
+        n += 1
+        # Test if we have recovered the key by decrypting a ciphertext
+        # This is done by bruteforcing the final bit, as we can't exploit
+        # the square in the next round due to there not being another round
+        if pow(test_c, d << 1, N) == test_message:
+            d <<= 1
+            break
+        elif pow(test_c, (d << 1) + 1, N) == test_message:
+            d = (d << 1) + 1
+            break
 
-    mean_bit0_red = sum(bit0_red) // len(bit0_red)
-    mean_bit0_nored = sum(bit0_nored) // len(bit0_nored)
-    mean_bit1_red = sum(bit1_red) // len(bit1_red)
-    mean_bit1_nored = sum(bit1_nored) // len(bit1_nored)
-
-    if mean_bit0_red - mean_bit0_nored > mean_bit1_red - mean_bit1_nored:
-        d <<= 1
-        c_cur = c_0
-    else:
-        d = (d << 1) + 1
-        c_cur = c_1
-    n += 1
-    print d
-    test_c = random.randint(2, N)
-    _, interaction = interact(test_c)
-    if pow(test_c, d << 1, N) == interaction:
-        d <<= 1
-        break
-    elif pow(test_c, (d << 1) + 1, N) == interaction:
-        d = (d << 1) + 1
-        break
-
-print "%X" % d
-print pow(test_c, d, N)
-print interaction
+# Print results
+print "Key Recovered"
+print "Key: %X" % d
+print "Message decrypted by key: %X" % pow(test_c, d, N)
+print "Message decrypted by system: %X" % test_message
+print "Number of interactions with system: %d" % num_interactions

@@ -1,6 +1,7 @@
 import sys
 import subprocess
 import random
+import math
 
 # Defining the word length
 w = 64
@@ -64,7 +65,7 @@ def mont_exp(x, y, N, rho_2, l_N, omega):
     x_p, _ = mont_mul(x, rho_2, N, l_N, omega)
     t = mont_red(rho_2, N, l_N, omega)
 
-    for i in range(len("%X" % y) * 4 - 1, -1, -1):
+    for i in range(int(math.log(y, 2)), -1, -1):
         t, _ = mont_mul(t, t, N, l_N, omega)
         if (y >> i) & 1:
             t, _ = mont_mul(t, x_p, N, l_N, omega)

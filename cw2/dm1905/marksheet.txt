@@ -16,7 +16,7 @@
 So that we can calibrate and improve the assignment in the future, give us
 a rough idea how long (in hours) you spent on it *in total*:
 
-effort : 22 hours
+effort : 23hours
 
 -------------------------------------------------------------------------------
 
@@ -90,5 +90,11 @@ to work if N < 2B. I looked briefly at D. Bleichenbacher's 1998 paper
 describing an attack which uses multiple ranges, but concluded that the
 complexity of creating those ranges as described in the paper and the increase
 in the number of interactions with the system required was not worthwhile.
+
+The attack for stage 2 is currently set to stop testing a key after more than
+64 bits. This can be changed if required at line 124.
+
+13000 ciphertexts was chosen as it has consistently managed to retrieve the key
+correctly without needing to repeat the whole loop.
 
 -------------------------------------------------------------------------------

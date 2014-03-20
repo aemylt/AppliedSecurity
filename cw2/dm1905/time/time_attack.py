@@ -158,7 +158,7 @@ while(pow(test_c, d, N) != test_message):
         diff_1 = mean_bit1_red - mean_bit1_nored
 
         # Statistically guess a bit
-        # If there is no difference, the default currently is 1
+        # If there is no difference, regenerate all messages and try this bit again
         if diff_0 > diff_1:
             d <<= 1
             c_cur = c_0

@@ -12,10 +12,7 @@ def ceildiv(x, y):
 # Converts an integer into a hexadecimal string, does any necessary padding
 # and returns the result as a string.
 def interact(f):
-    c_prime = (c * pow(f, e, N)) % N
-    c_primeh = ("%X" % c_prime).zfill(k * 2)
-
-    target_in.write("%s\n" % c_primeh)
+    target_in.write(("%X\n" % ((c * pow(f, e, N)) % N)).zfill(k * 2 + 1))
     target_in.flush()
 
     l = int(target_out.readline().strip(), 16)
@@ -30,8 +27,7 @@ def mgf(mgf_seed, seed_len, mask_len):
     T_hex = ""
     seed_hex = ("%X" % mgf_seed).zfill(seed_len)
     for counter in range(ceildiv(mask_len, h_len)):
-        counter_hex = ("%X" % counter).zfill(8)
-        T_hex += hashlib.sha1((seed_hex + counter_hex).decode("hex")).hexdigest()
+        T_hex += hashlib.sha1((seed_hex + ("%X" % counter).zfill(8)).decode("hex")).hexdigest()
     return int(T_hex[:mask_len], 16)
 
 # Get N, e and c

@@ -42,8 +42,7 @@ def mont_init(N):
 def mont_mul(x, y, N, l_N, omega):
     r = 0
     for i in range(l_N):
-        u = (((r & (b - 1)) + ((y >> (i * w)) & (b - 1)) * (x & (b - 1))) * omega) & (b - 1)
-        r = (r + ((y >> (i * w)) & (b - 1)) * x + u * N) >> w
+        r = (r + ((y >> (i * w)) & (b - 1)) * x + ((((r & (b - 1)) + ((y >> (i * w)) & (b - 1)) * (x & (b - 1))) * omega) & (b - 1)) * N) >> w
     if r > N:
         return r - N, True
     else:
@@ -52,8 +51,7 @@ def mont_mul(x, y, N, l_N, omega):
 # Perform Montgomery Reduction
 def mont_red(t, N, l_N, omega):
     for i in range(l_N):
-        u = (((t >> (i * w)) & (b - 1)) * omega) & (b - 1)
-        t += (u * N) << (i * w)
+        t += (((((t >> (i * w)) & (b - 1)) * omega) & (b - 1)) * N) << (i * w)
     t >>= (w * l_N)
     if t > N:
         return t - N
@@ -61,8 +59,7 @@ def mont_red(t, N, l_N, omega):
         return t
 
 # Montgomery exponentiation within a L2R binary loop
-def mont_exp(x, y, N, rho_2, l_N, omega):
-    x_p, _ = mont_mul(x, rho_2, N, l_N, omega)
+def mont_exp(x_p, y, N, rho_2, l_N, omega):
     t = mont_red(rho_2, N, l_N, omega)
 
     for i in range(int(math.log(y, 2)), -1, -1):
@@ -83,7 +80,7 @@ def generate_cs(N, d, rho_2, l_N, omega, num_interactions):
         c = random.randint(2, N)
         c_mont, _ = mont_mul(c, rho_2, N, l_N, omega)
         c_p.append(c_mont)
-        c_cur.append(mont_exp(c, d, N, rho_2, l_N, omega))
+        c_cur.append(mont_exp(c_mont, d, N, rho_2, l_N, omega))
         time, test_message = interact(c)
         num_interactions += 1
         c_time.append(time)
@@ -132,16 +129,14 @@ while(pow(test_c, d, N) != test_message):
         bit1_red = []
         bit1_nored = []
         for i, c in enumerate(c_p):
-            ci_0 = c_cur[i]
-            ci_0, _ = mont_mul(ci_0, ci_0, N, l_N, omega)
+            ci_0, _ = mont_mul(c_cur[i], c_cur[i], N, l_N, omega)
             c_0.append(ci_0)
             ci_0, red0 = mont_mul(ci_0, ci_0, N, l_N, omega)
             if red0:
                 bit0_red.append(c_time[i])
             else:
                 bit0_nored.append(c_time[i])
-            ci_1 = c_cur[i]
-            ci_1, _ = mont_mul(ci_1, ci_1, N, l_N, omega)
+            ci_1, _ = mont_mul(c_cur[i], c_cur[i], N, l_N, omega)
             ci_1, _ = mont_mul(ci_1, c, N, l_N, omega)
             c_1.append(ci_1)
             ci_1, red1 = mont_mul(ci_1, ci_1, N, l_N, omega)

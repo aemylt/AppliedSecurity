@@ -20,7 +20,7 @@ def interact(f):
 
     l = int(target_out.readline().strip(), 16)
     if (l > 2):
-        print "Error occured during interaction: %d" % l
+        print >> sys.stderr, "Error occured during interaction: %d" % l
         sys.exit(0)
     return l
 

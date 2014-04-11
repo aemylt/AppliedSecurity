@@ -50,7 +50,7 @@ x = interact(c, "")
 
 x_p = interact(c, "8,1,0,0,0")
 
-valid = [[[] for j in range(256)] for i in range(16)]
+valid = [[[] for j in range(86)] for i in range(16)]
 for i in range(16):
     if (i < 4):
         div = 2
@@ -60,7 +60,9 @@ for i in range(16):
         div = 1
     for k in range(256):
         delta = float(inv_s[x[i] ^ k] ^ inv_s[x_p[i] ^ k]) / div
-        if int(delta) == delta:
+        # If delta is greater than 85 then it can't satisfy equations for bytes 5-8
+        # If delta is not an integer then it can't satisfy equations for bytes 9-16
+        if delta < 86 and int(delta) == delta:
             valid[i][int(delta)].append(k)
 
 for b in [[0, 13, 10, 7], [4, 1, 14, 11], [8, 5, 2, 15], [12, 9, 6, 3]]:

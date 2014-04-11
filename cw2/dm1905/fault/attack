@@ -50,7 +50,7 @@ x = interact(c, "")
 
 x_p = interact(c, "8,1,0,0,0")
 
-valid = [{} for i in range(16)]
+valid = [[[] for j in range(256)] for i in range(16)]
 for i in range(16):
     if (i < 4):
         div = 2
@@ -59,15 +59,20 @@ for i in range(16):
     else:
         div = 1
     for k in range(256):
-        delta = float((inv_s[x[i] ^ k] ^ inv_s[x_p[i] ^ k])) / div
-        if delta not in valid[i]:
-            valid[i][delta] = []
-        valid[i][delta].append(k)
+        valid[i][(inv_s[x[i] ^ k] ^ inv_s[x_p[i] ^ k])/div].append(k)
 
 for b in [[0, 13, 10, 7], [4, 1, 14, 11], [8, 5, 2, 15], [12, 9, 6, 3]]:
-    for byte in b:
-        for delta in valid[byte].copy().iterkeys():
-            if not (delta in valid[b[0]] and delta in valid[b[1]] and delta in valid[b[2]] and delta in valid[b[3]]):
-                del valid[byte][delta]
-    for byte in b:
-        print valid[byte]
+    i = 0
+    while True:
+        if i >= len(valid[b[0]]):
+            break
+        if not valid[b[0]][i] or not valid[b[1]][i] or not valid[b[2]][i] or not valid[b[3]][i]:
+            for byte in b:
+                del valid[byte][i]
+        else:
+            i += 1
+
+for v in valid:
+    print v
+
+print [len(v) for v in valid]

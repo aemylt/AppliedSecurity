@@ -3,21 +3,29 @@ Stage 1:
 Q.1.1 Consider an example where N = 551, e = 5, d = 101 and c = 243.  Using
       your own words, briefly explain and illustrate the working principle
       of this attack (i.e., how and why it works).
+The attack assumes that we have access to an oracle that allows us to indicate whether the message m' we pass into the device is within some range m' < B, where B = 2^8(k-1), k = ceil(log_256(N)). In the case of this attack, k = 2 and B = 256. In the case of our attack, this would be return code 1.
+
+Because we know that m is a valid RSAES-OAEP plaintext, we know that the plaintext m is within a range 0 <= m < B. By using the homomorphic properties of RSA, we can compute c' = m * f^e (mod N) to produce a new plaintext m' = m * f and use the oracle to identify if this ciphertext is still within the range 0 <= m * f < B. We can utilise this knowledge to further reduce the range of ciphertexts m could possibly be between.
+
+The first step is keep incrementing f_1 by powers of 2 until we get an indication that m' >= B. For our example, this occurs when f_1 = 128. Now we know that 256 <= m * f_1 < 512, or alternatively, that 128 <= m * 64 < 512 where f_1 / 2 = 64. Because we know f_1, we can reduce our range of possibilities to 2 <= m < 4. Our range has now been reduced to B / f_1 possibilities.
+
+Step 2 of the attack is to reduce the range further. We do this by computing an f_2 = floor((n+B)/B) * f_1, or 192 for our example. This ensures that for any possible m, N / 2 <= m * f_2 < N + B, by multiplying our known ranges from step 1 by f_2. We then increment f_2 repeatedly by f_1 / 2 until we reach a point where our Oracle says m * f_2 (mod N) < B. For our example, this is where f_2 = 192. At this point, we have a new range where N = 551 <=  f_2 * m < N + B = 807. As f_2 is known, we now know that 3 <= m < 4. Our range is now floor(B / f_2) possibilities, where f_2 > f_1.
+
+This knowledge of the range of possibilities for m is used in step 3. From step 2, we know that 3 <= m < 4. From here, we use a method similar to binary search to effectively halve the range with each iteration until we hit a point where m_min = m_max. We do this by selecting a multiple f_3 ~ i * n + B for some boundary point i and using this to rougly half this range with each iteration.
+
+To do this, we select f_3 strategically. First, we select a value f_tmp such that there are roughly 2B possible values for f_tmp * m. We do this by selecting f_tmp = floor(2 * B / (m_max - m_min)) = 512 for our case. We then select a boundary point i * n + B ~ f_tmp * m to act as our mid-point in the range, approximated by computing i = floor(f_tmp * m_min / B) = 6, which when substituted into the previous equation gives us f_tmp * m_min + B ~ f_tmp * m. We then choose a multiple f_3 = ceil(i * N / m_min) = 1102 to give us i * N <= f_3 * m < i * N + 2B. We then send this new ciphertext - m * f_3 ^ e (mod N) to the Oracle.
+
+If the Oracle returns < B, we know that i * N / f_3 <= m < (i * N + B) / f_3 and can adjust m_max accordingly, or do the opposite if the oracle returns >= B in which case (i * N + B) / f_3 <= m < (i * N + 2 * B) / f_3. This method effectively halves the search space with each iteration, until m_min = m_max = m.
+
+In our example, using the value of f_3 previously stated means that the oracle will return < B, so we update m_max = floor((6 * 551 + 256) / 1102) = 3. At this point, m_min = m_max = 3, so m = 3 and our attack has completed. If we re-encrypt this plaintext, we get 3^5 (mod 551) = 243 = c, and thus our attack has been successful. 
 Q.1.2 To prevent the attack, the vendor suggests altering the software: the
       idea is that no matter what error occurs, the same error code will be
       produced.  Explain whether (and why, or why not) this change alone is
       sufficient.
-This change alone is not sufficient to prevent this attack, as the attacker
-can use side-channel data to still distinguish the errors. For example, if
-the errors are thrown as soon as they are found, then it will take less
-time for the device to return Error 1 than Error 2. An attacker can use
-this difference in timings to distinguish the two errors and still perform
-the attack, even if the errors returned are the same.
+This change alone is not sufficient to prevent this attack, as the attacker can use side-channel data to still distinguish the errors. For example, if the errors are thrown as soon as they are found, then it will take less time for the device to return Error 1 than Error 2. An attacker can use this difference in timings to distinguish the two errors and still perform the attack, even if the errors returned are the same.
 Q.1.7 Side-channel attacks are often categorised as being either simple or
       differential: how would categorise this attack, and why?
-This is a differential side-channel attack, as it involves analysing data
-collected from different messages to compute intermediate values, as opposed
-to simple attacks which involve graphical analysis of side-channel data.
+This is a differential side-channel attack, as it involves analysing the differences between the computation of different messages in order to retrieve the plaintext.
 
 
 Stage 2:
@@ -26,25 +34,19 @@ Q.2.1 The vendor of this attack target is concerned that news of this attack
       could scare off potential customers; they will make any alteration
       necessary (in software or hardware) to prevent the attack.  Explain
       the options they have, and which one you would recommend.
-The ideal method of preventing differential timing attacks is to make the
-device isochronous. This means that any decryption runs in a constant number
-of cycles, regardless of the private key. This makes differential timing
-attacks impossible as the attacker can no longer differentiate between the
-number of cycles. This is very difficult to implement in practice due to
-operations on some CPUs not running in constant time. But some parts can be
-changed to help this, such as always computing the reduction in the
-Montgomery Multiplication in both cases and returning the relevant result,
-which removes the branch statement exploited in this specific timing attack.
+The ideal method of preventing differential timing attacks is to make the device isochronous. This means that any decryption runs in a constant number of cycles, regardless of the private key. This makes differential timing attacks impossible as the attacker can no longer use the differences in timings to distinguish operations. This is very difficult to implement in practice due to operations on some CPUs not running in constant time.
 
-Another option is to use the Chinese Remainder Theorem, so that instead of
-performing the exponentiation modulo N, it is performed modulo p and modulo
-q. Because p and q are part of the private key, the attacker can't use a
-reference model to work out whether or not a reduction is occuring.
+But some parts can be changed to help this, such as always computing the reduction in the Montgomery Multiplication in both cases and returning the relevant result, which removes the branch statement exploited in this specific timing attack.
+
+Another option is to use the Chinese Remainder Theorem, so that instead of performing the exponentiation modulo N, it is performed modulo p and modulo q. Because p and q are part of the private key, the attacker can't use a reference model to work out whether or not a reduction is occuring.
 Q.2.2 Assuming a Montgomery multiplication takes n (simulated) clock cycles
       on the attack target, estimate the value of n (as accurately as you
       can) and explain how you did so.
 Q.2.3 Your implementation of this attack will use some form of statistical
       test.  Explain what test you have used, and how it works.
+The test I have used is a distinguisher test. It works by attempting to distinguish between two cases based on what we are guessing. If our guess is correct, then there will be a strong difference between the two cases; if our guess is wrong, then the difference will be negligible as our cases will essentially be random.
+
+In the case of our attack, our distinguisher is the case of whether or not a reduction occured in the multiplication after the i-th round, and our guess is whether the i-th key bit is 1 or 0. If our guess about the i-th bit is correct, then we should see a strong difference between timings where there was a reduction and timings where there wasn't. If it is incorrect, then our guesses about a reduction occuring will be wrong in a number of cases, meaning the timings in each set will be seemingly random and therefore the difference between the timings where we think there is a reduction and the timings where we think there isn't will be small.
 
 
 Stage 3:

@@ -70,7 +70,7 @@ the style or efficiency of a solution.
               - Robustness  of attack strategy                       ( 20%)
               - Correctness of attack strategy                       ( 60%)
 
-                Attack result : [...]
+                Attack result : [2E3D1FBEEFBDFA7619700B105845E8F6]
 
 [?] Stage 5 : analysis                                               (100%)
 

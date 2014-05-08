@@ -56,15 +56,15 @@ the style or efficiency of a solution.
 
                 Attack result : [C7C13DFB6FE8F33B]
 
-[?] Stage 3 : an attack based on an injected fault
+[X] Stage 3 : an attack based on an injected fault
 
               - Efficiency  of attack strategy                       ( 20%)
               - Robustness  of attack strategy                       ( 20%)
               - Correctness of attack strategy                       ( 60%)
 
-                Attack result : [...]
+                Attack result : [7DE6F5A5F84C01CFC638E5DA64EDC37B]
 
-[?] Stage 4 : an attack based on power consumption
+[X] Stage 4 : an attack based on power consumption
 
               - Efficiency  of attack strategy                       ( 20%)
               - Robustness  of attack strategy                       ( 20%)

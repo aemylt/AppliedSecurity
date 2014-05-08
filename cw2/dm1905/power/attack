@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 import numpy, subprocess, sys, os, random, struct, Crypto.Cipher.AES as AES
 
-def interact(c):
-    target_in.write("%X\n" % c)
+def interact(m):
+    target_in.write("%X\n" % m)
     target_in.flush()
-    trace = [int(pow) for pow in target_out.readline().strip().split(",")[1:]]
-    m = int(target_out.readline().strip(), 16)
-    return trace, m
+    trace = [int(pow) for pow in target_out.readline().strip().split(",")[1:]][:2000]
+    c = int(target_out.readline().strip(), 16)
+    return trace, c
 
 sub_bytes = numpy.array([
     0x63, 0x7C, 0x77, 0x7B, 0xF2, 0x6B, 0x6F, 0xC5, 0x30, 0x01, 0x67, 0x2B, 0xFE, 0xD7, 0xAB, 0x76,
@@ -53,29 +53,31 @@ target = subprocess.Popen(args   = os.path.realpath(sys.argv[ 1 ]),
 target_out = target.stdout
 target_in  = target.stdin
 
-ciphertexts = [random.getrandbits(128) for i in range(200)]
+print "Generating traces"
+
+plaintexts = [random.getrandbits(128) for i in range(100)]
 trace_list = []
-plaintexts = []
+ciphertexts = []
 
 inputs = [[] for i in range(16)]
-for c in ciphertexts:
-    trace, plain = interact(c)
+for m in plaintexts:
+    trace, c = interact(m)
     trace_list.append(trace)
-    plaintexts.append(plain)
+    ciphertexts.append(c)
     for i in range(0, 16):
-        inputs[i].append((c >> i * 8) & 0xFF)
+        inputs[i].append((m >> i * 8) & 0xFF)
 
 traces = numpy.array(trace_list)
 
 keys = numpy.fromfunction(lambda i: i, (256,), dtype=int)
 
-chunksize = 50
+chunksize = 40
 chunks = int(len(traces[0]) / 50) + 1
 
 key_bytes = []
 
 for cnt, input in enumerate(inputs):
-    print cnt
+    print "Computing byte %d" % cnt
     power_consumption = numpy.array([byte_hamming_weight[after] for after in [sub_bytes[numpy.bitwise_xor(input_data, keys)] for input_data in input]])
     corrs = numpy.zeros(256)
     for i in range(256):
@@ -86,7 +88,7 @@ for cnt, input in enumerate(inputs):
 
 key = "".join([("%X" % k).zfill(2) for k in key_bytes[::-1]])
 
-print key
+print "Key: " + key
 
-print "%X" % plaintexts[0]
-print AES.new(key.decode("hex")).encrypt((("%X" % ciphertexts[0]).zfill(32)).decode("hex")).encode("hex").upper()
+print "Message encrypted by device: %X" % ciphertexts[0]
+print "Message encrypted by derived key: " + AES.new(key.decode("hex")).encrypt((("%X" % plaintexts[0]).zfill(32)).decode("hex")).encode("hex").upper()

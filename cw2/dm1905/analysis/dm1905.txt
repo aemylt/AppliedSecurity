@@ -48,6 +48,8 @@ For this calculation I have used the replica device dm1905.R, and assumed that t
     1. Computation not related to the exponentiation, such as computing roh and omega for the Montgomery multiplication and converting to and from Montgomery representation. This can be computed by measuring the number of cycles for an exponent of zero. Running this on a number of reductions gives us a result of 1024 cycles.
     2. Montgomery Multiplications, ignoring reductions. This can be calculated by using an exponent of one. Running a variety of operations on this exponent shows that all of them take a total of 1536 cycles for encryption time. From this, 1024 cycles are for part 1, leaving 512 cycles for the multiplication operation.
     3. Reductions. This can be calculated using an exponent of 2. After performing 10000 randomly generated operations, these decryptions run in either 2048 or 2064 cycles. The decryptions that took 2048 cycles are ignored as that fits with the previous calculations to imply that no reduction occured there. Assuming that the decryptions that took 2064 operations only had one occurance of a reduction, this means that each reduction takes 16 cycles.
+
+From this, we can conclude that it each modular multiplication takes 512 cycles and each reduction takes a further 16 cycles.
 Q.2.3 Your implementation of this attack will use some form of statistical
       test.  Explain what test you have used, and how it works.
 The test I have used is a distinguisher test. It works by attempting to distinguish between two cases based on what we are guessing. If our guess is correct, then there will be a strong difference between the two cases; if our guess is wrong, then the difference will be negligible as our cases will essentially be random.
@@ -61,6 +63,7 @@ Q.3.1 Imagine that instead of influencing data (i.e., the state matrix), a
       fault can influence control-flow (e.g., conditional statements, loop
       structure) somehow during execution.  Stating any assumptions you
       make, give an alternative attack strategy based on this ability.
+Suppose we could skip computation of one byte for the SubBytes operation in the eighth round - if SubBytes is implemented as just iteration S-Box over a list of bytes then this would be equivalent to altering the loop statement to skip either the first or last byte, or could alternatively be achieved by manipulation of the program counter. This would result in an unexpected change over the whole of one byte in the state matrix after computing SubBytes, which would propagate to the whole message by the end of the final round like our original attack did. We could then use similar computations to those in the paper described by Tunstall et al to retrieve the key.
 Q.3.2 The question does not specify how faults are induced.  For the given
       attack target and context, explain one viable approach.
 Assuming that the version of gf28_inv that relies on Fermat's Little Theorem is used in this implementation, the low-resource implementation of AES runs in a near-constant time. From this, we can work out when aes_enc_sbox is called on the first byte for the eighth round and interrupt the program at that point in the execution. From there, we can find the location of the parameter to aes_enc_sbox in RAM and corrupt it.
@@ -77,11 +80,20 @@ Q.4.1 As a security consultant, you have been working on a prototype of the
       to make any alteration necessary (in software or hardware) to prevent
       the attack.  Explain the options available, and which one you would
       recommend.
+One option in is to shuffle the S-boxes randomly, which results in a distribution of the correlations for this attack. While this countermeasure can help reduce the affect of this attack, it can be easily thwarted by some simple integration over the relevant cycles to produce the same result as before.
+
+Another choice is to mask the input, by XOR-ing the message with a random 128-bit word before encryption. This provides security as the input to AES.encrypt is now independent of the message and thus can't be modelled by the attacker, but requires more computation due to needing to process the mask.
+
+There are a number of mitigations you can also make at a protocol level, but given that this is a generic encryption program, it should ideally not rely on higher-level programs. Based on these choices, my recommendation would be masking the message, for providing more security to the library albeit at the cost of a slightly worse running time.
 Q.4.2 Your implementation of this attack will target some operation during
       execution of AES.  Identify which operation you target, and explain
       why.  Outline other operation(s) you could have targeted, and why they
       might be a better or worse choice.
+The operation targeted is the SubBytes operation. SubBytes is a highly nonlinear operation, which makes it ideal for power analysis as it allows for best distinguishment of the key - slight errors in the key byte will produce significant differences in the SubBytes result.
+
+We could alternatively target the first AddRoundKey, ShiftRows or MixColumns operations. ShiftRows would provide us with no benefit over SubBytes, as it is a direct mapping between each bit from SubBytes to ShiftRows. MixColumns is also non-linear, but requires more key guesses - 2^32 for every four bytes of the key. AddRoundKey is a linear operation, so it is a weaker choice for operation to attack.
 Q.4.4 DPA attacks rely on a leakage model; for an Intel 8051, one might
       consider Hamming weight or Hamming distance models for example.
       Explain and justify the choice of model you used (e.g., explain
       why/how the attack target might leak information in this way).
+I used a Hamming Weight model, which tries to relate the number of positive bits in the state matrix after enough operations to the power consumptions. This is a good choice for a model, as it is likely that the more bits set during a computation will result in more power consumed.

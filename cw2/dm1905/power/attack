@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import numpy, subprocess, sys, os, random, struct, Crypto.Cipher.AES as AES
 
+# Interact with the target device
 def interact(m):
     target_in.write("%X\n" % m)
     target_in.flush()
@@ -8,6 +9,7 @@ def interact(m):
     c = int(target_out.readline().strip(), 16)
     return trace, c
 
+# S-box
 sub_bytes = numpy.array([
     0x63, 0x7C, 0x77, 0x7B, 0xF2, 0x6B, 0x6F, 0xC5, 0x30, 0x01, 0x67, 0x2B, 0xFE, 0xD7, 0xAB, 0x76,
     0xCA, 0x82, 0xC9, 0x7D, 0xFA, 0x59, 0x47, 0xF0, 0xAD, 0xD4, 0xA2, 0xAF, 0x9C, 0xA4, 0x72, 0xC0,
@@ -27,6 +29,7 @@ sub_bytes = numpy.array([
     0x8C, 0xA1, 0x89, 0x0D, 0xBF, 0xE6, 0x42, 0x68, 0x41, 0x99, 0x2D, 0x0F, 0xB0, 0x54, 0xBB, 0x16
 ])
 
+# Hamming weights for all 256 bytes
 byte_hamming_weight = numpy.array([
     0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4,
     1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
@@ -55,6 +58,7 @@ target_in  = target.stdin
 
 print "Generating traces"
 
+# Gather traces and break up inputs
 plaintexts = [random.getrandbits(128) for i in range(100)]
 trace_list = []
 ciphertexts = []
@@ -78,14 +82,18 @@ key_bytes = []
 
 for cnt, input in enumerate(inputs):
     print "Computing byte %d" % cnt
+    # Calculate the power consumption of each message byte
     power_consumption = numpy.array([byte_hamming_weight[after] for after in [sub_bytes[numpy.bitwise_xor(input_data, keys)] for input_data in input]])
     corrs = numpy.zeros(256)
     for i in range(256):
+        # Get the maximum correlation coefficient for each key
         for j in range(1, chunks):
             corrs[i] = max(corrs[i], *numpy.corrcoef(traces[:, (j - 1) * chunksize:j * chunksize].T, power_consumption[:, i])[chunksize][:chunksize])
 
+    # Select the maximum key hypothesis
     key_bytes.append(corrs.argmax())
 
+# Reconnect the key bytes
 key = "".join([("%X" % k).zfill(2) for k in key_bytes[::-1]])
 
 print "Key: " + key

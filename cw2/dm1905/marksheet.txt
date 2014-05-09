@@ -16,7 +16,7 @@
 So that we can calibrate and improve the assignment in the future, give us
 a rough idea how long (in hours) you spent on it *in total*:
 
-effort : 24 hours
+effort : 50 hours
 
 -------------------------------------------------------------------------------
 
@@ -28,7 +28,15 @@ by the assignment description of course).  Let us know what third-party
 source code or resources you used (if any) so it's clear what's your work 
 and what isn't:
 
-[...]
+For the power attack, I have used the NumPy 1.4.1 library installed on the machines in the Linux Lab:
+http://sourceforge.net/projects/numpy/files/NumPy/1.4.1/
+
+Tables for S-box, Inverse S-box and Round Constant have been taken from Wikipedia:
+https://en.wikipedia.org/wiki/Rijndael_S-box
+https://en.wikipedia.org/wiki/Rijndael_key_schedule#Rcon
+
+Hamming-Weight calculations have been taken from Workspace1 of 'Power Analysis Attacks - Revealing the Secrets of Smartcards':
+http://www.dpabook.org/onlinematerial/matlabscripts/index.htm
 
 -------------------------------------------------------------------------------
 
@@ -72,7 +80,7 @@ the style or efficiency of a solution.
 
                 Attack result : [2E3D1FBEEFBDFA7619700B105845E8F6]
 
-[?] Stage 5 : analysis                                               (100%)
+[X] Stage 5 : analysis                                               (100%)
 
                                                                      ------
                                                                      (500%)
@@ -85,24 +93,10 @@ Any other documentation, notes or comments that you think are important or
 might be easy to overlook (e.g., a subtle issue or technique in associated
 source code) should go here:
 
-Both programs are written as Python scripts and can thus be run as they are.
+Both programs are written as Python scripts, and thus a Makefile is not required.
 
-As per section 3.2 of Manger's paper, the attack for stage 1 is not guaranteed
-to work if N < 2B. I looked briefly at D. Bleichenbacher's 1998 paper
-describing an attack which uses multiple ranges, but concluded that the
-complexity of creating those ranges as described in the paper and the increase
-in the number of interactions with the system required was not worthwhile.
+Stage 3's attack follows the paper by Manger et al up until the end of the first part of the attack. It uses two faults to produce two sets of hypotheses and computes the intersection of these sets to find the correct key. If more time was available then this would be the main area of improvement, as using two faults instead of one is not ideal in a real-world situation.
 
-The attack for stage 2 is currently set to stop testing a key after more than
-64 bits. This can be changed if required at line 124 of attack. After this many
-bits, if we still can't produce the same plaintext as the device, the program
-will reset and start guessing from bit 0 again.
-
-13000 ciphertexts was chosen as it has consistently managed to retrieve the key
-correctly without needing to repeat the whole loop.
-
-If the distinguisher can't recognise a bit - in other words, both possible
-values for the bit have equal values - the ciphertexts are regenerated and
-computed up to the bit we are currently at.
+Stage 4 uses the first 2000 traces of 100 messages to perform the attack. This is based off of testing the number of traces and messages and looking for a good balance between performance and consistency in being able to recover the key.
 
 -------------------------------------------------------------------------------

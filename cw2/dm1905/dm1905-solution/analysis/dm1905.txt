@@ -1,0 +1,99 @@
+Stage 1:
+
+Q.1.1 Consider an example where N = 551, e = 5, d = 101 and c = 243.  Using
+      your own words, briefly explain and illustrate the working principle
+      of this attack (i.e., how and why it works).
+The attack assumes that we have access to an oracle that allows us to indicate whether the message m' we pass into the device is within some range m' < B, where B = 2^8(k-1), k = ceil(log_256(N)). In the case of this attack, k = 2 and B = 256. In the case of our attack, this would be return code 1.
+
+Because we know that m is a valid RSAES-OAEP plaintext, we know that the plaintext m is within a range 0 <= m < B. By using the homomorphic properties of RSA, we can compute c' = m * f^e (mod N) to produce a new plaintext m' = m * f and use the oracle to identify if this ciphertext is still within the range 0 <= m * f < B. We can utilise this knowledge to further reduce the range of ciphertexts m could possibly be between.
+
+The first step is keep incrementing f_1 by powers of 2 until we get an indication that m' >= B. For our example, this occurs when f_1 = 128. Now we know that 256 <= m * f_1 < 512, or alternatively, that 128 <= m * 64 < 512 where f_1 / 2 = 64. Because we know f_1, we can reduce our range of possibilities to 2 <= m < 4. Our range has now been reduced to B / f_1 possibilities.
+
+Step 2 of the attack is to reduce the range further. We do this by computing an f_2 = floor((n+B)/B) * f_1, or 192 for our example. This ensures that for any possible m, N / 2 <= m * f_2 < N + B, by multiplying our known ranges from step 1 by f_2. We then increment f_2 repeatedly by f_1 / 2 until we reach a point where our Oracle says m * f_2 (mod N) < B. For our example, this is where f_2 = 192. At this point, we have a new range where N = 551 <=  f_2 * m < N + B = 807. As f_2 is known, we now know that 3 <= m < 4. Our range is now floor(B / f_2) possibilities, where f_2 > f_1.
+
+This knowledge of the range of possibilities for m is used in step 3. From step 2, we know that 3 <= m < 4. From here, we use a method similar to binary search to effectively halve the range with each iteration until we hit a point where m_min = m_max. We do this by selecting a multiple f_3 ~ i * n + B for some boundary point i and using this to rougly half this range with each iteration.
+
+To do this, we select f_3 strategically. First, we select a value f_tmp such that there are roughly 2B possible values for f_tmp * m. We do this by selecting f_tmp = floor(2 * B / (m_max - m_min)) = 512 for our case. We then select a boundary point i * n + B ~ f_tmp * m to act as our mid-point in the range, approximated by computing i = floor(f_tmp * m_min / B) = 6, which when substituted into the previous equation gives us f_tmp * m_min + B ~ f_tmp * m. We then choose a multiple f_3 = ceil(i * N / m_min) = 1102 to give us i * N <= f_3 * m < i * N + 2B. We then send this new ciphertext - m * f_3 ^ e (mod N) to the Oracle.
+
+If the Oracle returns < B, we know that i * N / f_3 <= m < (i * N + B) / f_3 and can adjust m_max accordingly, or do the opposite if the oracle returns >= B in which case (i * N + B) / f_3 <= m < (i * N + 2 * B) / f_3. This method effectively halves the search space with each iteration, until m_min = m_max = m.
+
+In our example, using the value of f_3 previously stated means that the oracle will return < B, so we update m_max = floor((6 * 551 + 256) / 1102) = 3. At this point, m_min = m_max = 3, so m = 3 and our attack has completed. If we re-encrypt this plaintext, we get 3^5 (mod 551) = 243 = c, and thus our attack has been successful. 
+Q.1.2 To prevent the attack, the vendor suggests altering the software: the
+      idea is that no matter what error occurs, the same error code will be
+      produced.  Explain whether (and why, or why not) this change alone is
+      sufficient.
+This change alone is not sufficient to prevent this attack, as the attacker can use side-channel data to still distinguish the errors. For example, if the errors are thrown as soon as they are found, then it will take less time for the device to return Error 1 than Error 2. An attacker can use this difference in timings to distinguish the two errors and still perform the attack, even if the errors returned are the same.
+Q.1.7 Side-channel attacks are often categorised as being either simple or
+      differential: how would categorise this attack, and why?
+This is a differential side-channel attack, as it involves analysing the differences based on a mathematical model instead of visually.
+
+
+Stage 2:
+
+Q.2.1 The vendor of this attack target is concerned that news of this attack
+      could scare off potential customers; they will make any alteration
+      necessary (in software or hardware) to prevent the attack.  Explain
+      the options they have, and which one you would recommend.
+There are a number of options to counter this attack. The first option against this attack specifically is to use the Chinese Remainder Theorem; because the attacker doesn't know p and q, they would no longer be able to simulate the model. However, there are already theoretical attacks against this countermeasure.
+
+A similar method is to blind the message. This involves selecting a pair v_i and v_f such that v_i = v_f^-e (mod N). Before we begin decrypting our ciphertext c, we create c' = c * v_i (mod N). After decryption, we get m' = c^d * v_i^d = m * (v_f^-e)^d = m * v_f^-1 (mod N). We can then multiply this by v_f and get m' * v_f = m * v_f^-1 * v_f = m (mod N). If these values are kept secret, the attacker cannot learn anything useful about the input to the modular exponentiation. It should be noted that v_i and v_f should be different for each encryption, otherwise there is a risk of extracting them based on timing analysis. These can be easily computed however: Randomly compute an initial v_i and v_j at the start of the program's execution, and for each encryption produce new values as v_i' = v_i^2 and v_j' = v_j^2.
+
+The final method I looked at was to compute the reduction in every multiplication and return one of the two results depending on whether or not R >= N. This method means that the Montgomery Multiplication now runs in constant time, but doesn't guarantee a lack of timing attacks in other areas.
+
+Out of these methods, I would recommend blinding the message, as it provides the best security against timing attacks based on the modular exponentiation, albeit at an increase in computation time.
+Q.2.2 Assuming a Montgomery multiplication takes n (simulated) clock cycles
+      on the attack target, estimate the value of n (as accurately as you
+      can) and explain how you did so.
+For this calculation I have used the replica device dm1905.R, and assumed that the modular exponetiation consists of three parts:
+    1. Computation not related to the exponentiation, such as computing roh and omega for the Montgomery multiplication and converting to and from Montgomery representation. This can be computed by measuring the number of cycles for an exponent of zero. Running this on a number of reductions gives us a result of 1024 cycles.
+    2. Montgomery Multiplications, ignoring reductions. This can be calculated by using an exponent of one. Running a variety of operations on this exponent shows that all of them take a total of 1536 cycles for encryption time. From this, 1024 cycles are for part 1, leaving 512 cycles for the multiplication operation.
+    3. Reductions. This can be calculated using an exponent of 2. After performing 10000 randomly generated operations, these decryptions run in either 2048 or 2064 cycles. The decryptions that took 2048 cycles are ignored as that fits with the previous calculations to imply that no reduction occured there. Assuming that the decryptions that took 2064 operations only had one occurance of a reduction, this means that each reduction takes 16 cycles.
+
+From this, we can conclude that it each modular multiplication takes 512 cycles and each reduction takes a further 16 cycles.
+Q.2.3 Your implementation of this attack will use some form of statistical
+      test.  Explain what test you have used, and how it works.
+The test I have used is a distinguisher test. It works by attempting to distinguish between two cases based on what we are guessing. If our guess is correct, then there will be a strong difference between the two cases; if our guess is wrong, then the difference will be negligible as our cases will essentially be random.
+
+In the case of our attack, our distinguisher is the case of whether or not a reduction occured in the multiplication after the i-th round, and our guess is whether the i-th key bit is 1 or 0. If our guess about the i-th bit is correct, then we should see a strong difference between timings where there was a reduction and timings where there wasn't. If it is incorrect, then our guesses about a reduction occuring will be wrong in a number of cases, meaning the timings in each set will be seemingly random and therefore the difference between the timings where we think there is a reduction and the timings where we think there isn't will be small.
+
+
+Stage 3:
+
+Q.3.1 Imagine that instead of influencing data (i.e., the state matrix), a
+      fault can influence control-flow (e.g., conditional statements, loop
+      structure) somehow during execution.  Stating any assumptions you
+      make, give an alternative attack strategy based on this ability.
+Suppose we could skip computation of one byte for the SubBytes operation in the eighth round - if SubBytes is implemented as just iteration S-Box over a list of bytes then this would be equivalent to altering the loop statement to skip either the first or last byte, or could alternatively be achieved by manipulation of the program counter. This would result in an unexpected change over the whole of one byte in the state matrix after computing SubBytes, which would propagate to the whole message by the end of the final round like our original attack did. We could then use similar computations to those in the paper described by Tunstall et al to retrieve the key.
+Q.3.2 The question does not specify how faults are induced.  For the given
+      attack target and context, explain one viable approach.
+Assuming that the version of gf28_inv that relies on Fermat's Little Theorem is used in this implementation, the low-resource implementation of AES runs in a near-constant time. From this, we can work out when aes_enc_sbox is called on the first byte for the eighth round and interrupt the program at that point in the execution. From there, we can find the location of the parameter to aes_enc_sbox in RAM and corrupt it.
+Q.3.4 How do the properties of different AES round functions influence the
+      effectiveness of your attack?  More specifically, imagine SubBytes is
+      removed: does this help or hinder your attack
+The advantage of SubBytes in this attack is that changing only one bit in the state can affect a whole byte, which can then propagate across the whole message. If SubBytes were to be removed, we would need to inject more faults by toggling more bits or sending more messages. Either way, this is a hinderance to our attack.
+
+
+Stage 4:
+
+Q.4.1 As a security consultant, you have been working on a prototype of the
+      attack target; before the product is deployed, the vendor is willing
+      to make any alteration necessary (in software or hardware) to prevent
+      the attack.  Explain the options available, and which one you would
+      recommend.
+One option in is to shuffle the S-boxes randomly, which results in a distribution of the correlations for this attack. While this countermeasure can help reduce the affect of this attack, it can be easily thwarted by some simple integration over the relevant cycles to produce the same result as before.
+
+Another choice is to mask the input, by XOR-ing the message with a random 128-bit word before encryption. This provides security as the input to AES.encrypt is now independent of the message and thus can't be modelled by the attacker, but requires more computation due to needing to process the mask.
+
+There are a number of mitigations you can also make at a protocol level, but given that this is a generic encryption program, it should ideally not rely on higher-level programs. Based on these choices, my recommendation would be masking the message, for providing more security to the library albeit at the cost of a slightly worse running time.
+Q.4.2 Your implementation of this attack will target some operation during
+      execution of AES.  Identify which operation you target, and explain
+      why.  Outline other operation(s) you could have targeted, and why they
+      might be a better or worse choice.
+The operation targeted is the SubBytes operation. SubBytes is a highly nonlinear operation, which makes it ideal for power analysis as it allows for best distinguishment of the key - slight errors in the key byte will produce significant differences in the SubBytes result.
+
+We could alternatively target the first AddRoundKey, ShiftRows or MixColumns operations. ShiftRows would provide us with no benefit over SubBytes, as it is a direct mapping between each bit from SubBytes to ShiftRows. MixColumns is also non-linear, but requires more key guesses - 2^32 for every four bytes of the key. AddRoundKey is a linear operation, so it is a weaker choice for operation to attack.
+Q.4.4 DPA attacks rely on a leakage model; for an Intel 8051, one might
+      consider Hamming weight or Hamming distance models for example.
+      Explain and justify the choice of model you used (e.g., explain
+      why/how the attack target might leak information in this way).
+I used a Hamming Weight model, which tries to relate the number of positive bits in the state matrix after enough operations to the power consumptions. This is a good choice for a model, as it is likely that the more bits set during a computation will result in more power consumed.

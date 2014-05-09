@@ -69,7 +69,7 @@ for m in plaintexts:
 
 traces = numpy.array(trace_list)
 
-keys = numpy.fromfunction(lambda i: i, (256,), dtype=int)
+keys = numpy.arange(256)
 
 chunksize = 40
 chunks = int(len(traces[0]) / 50) + 1
